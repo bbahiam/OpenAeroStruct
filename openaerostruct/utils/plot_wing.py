@@ -95,30 +95,11 @@ class Display(object):
         cr = self.case_reader = SqliteCaseReader(self.db_name, pre_load=True)
         last_case = next(reversed(cr.get_cases('driver')))
 
-        names = []
-
-        # Aero or aerostructural
-        for key in cr.system_metadata.keys():
-            try:
-                surfaces = cr.system_metadata[key]['component_options']['surfaces']
-                for surface in surfaces:
-                    names.append(surface['name'])
-                break
-            except:
-                pass
-
-        # Structural-only
-        if not names:
-            for key in cr.system_metadata.keys():
-                try:
-                    surface = cr.system_metadata[key]['component_options']['surface']
-                    names = [surface['name']]
-                except:
-                    pass
+        names = _get_surf_names(cr)
 
         # figure out if this is an optimization and what the objective is
         obj_keys = last_case.get_objectives()
-        if obj_keys.keys(): # if its not an empty list
+        if obj_keys.keys(): # if it's not an empty list
             self.opt = True
             self.obj_key = list(obj_keys.keys())[0]
         else:
@@ -757,6 +738,36 @@ class Display(object):
         button5.grid(row=0, column=7, padx=5, sticky=Tk.W)
 
         self.auto_ref()
+
+
+def _get_surf_names(case_reader):
+    """
+    Returns a list of names for the surfaces in a case
+    case_reader: SqliteCaseReader
+    """
+    names = []
+
+    # Aero or aerostructural
+    for key in case_reader.system_metadata.keys():
+       try:
+           surfaces = case_reader.system_metadata[key]['component_options']['surfaces']
+           for surface in surfaces:
+               names.append(surface['name'])
+           break
+       except:
+           pass
+
+    # Structural-only
+    if not names:
+        for key in case_reader.system_metadata.keys():
+            try:
+                surface = case_reader.system_metadata[key]['component_options']['surface']
+                names = [surface['name']]
+            except:
+                pass
+
+    return names
+
 
 def disp_plot(args=sys.argv):
     disp = Display(args)
