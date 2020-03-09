@@ -125,6 +125,7 @@ class Display(object):
         self.obj = []
         self.cg = []
         self.point_mass_locations = []
+        self.control_surfaces = []
 
         pt_names = []
         for key in last_case.outputs:
@@ -215,6 +216,14 @@ class Display(object):
                 except:
                     ny = self.mesh[0].shape[1]
                     self.twist.append(np.atleast_2d(np.zeros(ny)))
+
+                # Control surfaces
+                try:
+                    self.control_surfaces.append(case.outputs[name+'.control_surfaces'])
+                except:
+                    pass
+
+            print(self.control_surfaces)
 
             if self.show_wing:
                 alpha.append(case.outputs['alpha'] * np.pi / 180.)

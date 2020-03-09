@@ -11,6 +11,7 @@ from openaerostruct.aerodynamics.states import VLMStates
 from openaerostruct.aerodynamics.compressible_states import CompressibleVLMStates
 from openaerostruct.structures.tube_group import TubeGroup
 from openaerostruct.structures.wingbox_group import WingboxGroup
+from openaerostruct.aerodynamics.control_surfaces import ControlSurface
 
 from openmdao.api import Group, NonlinearBlockGS, DirectSolver, LinearBlockGS, LinearRunOnce, NewtonSolver, ScipyKrylov
 
@@ -110,9 +111,29 @@ class CoupledAS(Group):
             DisplacementTransferGroup(surface=surface),
             promotes_inputs=['nodes', 'mesh', 'disp'], promotes_outputs=['def_mesh'])
 
+        normals_name = 'undeflected_normals'
         self.add_subsystem('aero_geom',
             VLMGeometry(surface=surface),
-            promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', 'normals', 'S_ref'])
+            promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', ('normals', normals_name), 'S_ref'])
+
+        # Add control surfaces
+        if 'control_surfaces' in surface:
+            for ctrl_surf in surface['control_surfaces']:
+                #TODO: fixed name only works with one control surface
+                deflected_normals_name = "normals"#"{}_normals".format(ctrl_surf['name'])
+                self.add_subsystem(ctrl_surf['name'],
+                                   ControlSurface(surface=surface,
+                                                  panels=ctrl_surf['panels']),
+                                   promotes_inputs=[('normals', normals_name),'delta_aileron'],#,f"delta_{control_surf['name']}"],
+                                   promotes_outputs=[('deflected_normals', deflected_normals_name)]
+                                   )
+                #iterate through names
+                normals_name = deflected_normals_name 
+        else:
+            pass #No control surface to add
+
+        #self.connect(normals_name,'normals')
+
 
         self.linear_solver = LinearRunOnce()
 
@@ -212,7 +233,7 @@ class AerostructPoint(Group):
             else:
                 prom_in = []
 
-            coupled.add_subsystem(name, coupled_AS_group, promotes_inputs=prom_in)
+            coupled.add_subsystem(name, coupled_AS_group, promotes_inputs=prom_in+['delta_aileron']) #TODO: fix hack
 
         if self.options['compressible'] == True:
             aero_states = CompressibleVLMStates(surfaces=surfaces, rotational=rotational)
@@ -224,7 +245,7 @@ class AerostructPoint(Group):
         # Add a single 'aero_states' component for the whole system within the
         # coupled group.
         coupled.add_subsystem('aero_states', aero_states,
-            promotes_inputs=prom_in)
+                promotes_inputs=prom_in)
 
         # Explicitly connect parameters from each surface's group and the common
         # 'aero_states' group.
@@ -260,7 +281,7 @@ class AerostructPoint(Group):
         """
         ### End change of solver settings ###
         """
-        prom_in = ['v', 'alpha', 'rho']
+        prom_in = ['v', 'alpha', 'rho', 'delta_aileron']#TODO: fix hack
         if self.options['compressible'] == True:
             prom_in.append('Mach_number')
 

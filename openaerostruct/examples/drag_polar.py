@@ -114,6 +114,12 @@ if __name__=='__main__':
     # Generate the aerodynamic mesh based on the previous dictionary
     mesh, twist_cp = generate_mesh(mesh_dict)
 
+    # Create a dictionary for the control surface
+    aileron = {
+            'panels' = None
+            'hinge_line' = None
+            }
+
     # Create a dictionary with info and options about the wing
     wing_surface = {
                 # Wing definition
@@ -141,6 +147,7 @@ if __name__=='__main__':
                                         # thickness
                 'with_viscous' : True,  # if true, compute viscous drag
                 'with_wave' : False,
+                'control_surfaces' = [aileron]
                 }
 
     # Create a dictionary to store options about the tail surface
