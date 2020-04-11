@@ -3,7 +3,6 @@ import numpy as np
 
 from openmdao.api import ExplicitComponent
 
-
 class MomentCoefficient(ExplicitComponent):
     """
     Compute the coefficient of moment (CM) for the entire aircraft.
@@ -108,7 +107,6 @@ class MomentCoefficient(ExplicitComponent):
             # Note: a scalar can be factored from a cross product, so I moved the division by MAC
             # down here for efficiency of calc and derivs.
             M = M + np.sum(moment, axis=0)
-
             # For the first (main) lifting surface, we save the MAC to correctly
             # normalize CM
             if j == 0:

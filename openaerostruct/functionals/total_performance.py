@@ -9,7 +9,6 @@ from openaerostruct.functionals.moment_coefficient import MomentCoefficient
 from openaerostruct.functionals.total_lift_drag import TotalLiftDrag
 from openaerostruct.functionals.sum_areas import SumAreas
 
-
 class TotalPerformance(Group):
     """
     Group to contain the total aerostructural performance components.

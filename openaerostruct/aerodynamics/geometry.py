@@ -3,7 +3,6 @@ import numpy as np
 
 from openmdao.api import ExplicitComponent
 
-
 np.random.seed(314)
 
 class VLMGeometry(ExplicitComponent):
