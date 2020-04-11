@@ -21,7 +21,7 @@ indep_var_comp = IndepVarComp()
 indep_var_comp.add_output('v', val=50.0, units='m/s') # Freestream Velocity
 indep_var_comp.add_output('alpha', val=5., units='deg') # Angle of Attack
 indep_var_comp.add_output('beta', val=0., units='deg') # Sideslip angle
-indep_var_comp.add_output('omega', val=np.array([30.0, 0.0, 0.0]), units='deg/s') # Rotation rate
+indep_var_comp.add_output('omega', val=np.array([50.0, 0.0, 0.0]), units='deg/s') # Rotation rate
 indep_var_comp.add_output('Mach_number', val=0.0) # Freestream Mach number
 indep_var_comp.add_output('re', val=1.e6, units='1/m') # Freestream Reynolds number
 indep_var_comp.add_output('rho', val=0.38, units='kg/m**3') # Freestream air density
@@ -98,6 +98,9 @@ prob.model.connect(name + '.mesh', point_name + '.aero_states.' + name + '_def_m
 
 # Set up the problem
 prob.setup()
+
+#from openmdao.api import view_model
+#view_model(prob)
 
 # Run analysis
 prob.run_model()

@@ -6,11 +6,10 @@ import matplotlib.pylab as plt
 
 from openmdao.api import IndepVarComp, Problem, NewtonSolver, BroydenSolver, \
             DirectSolver, BalanceComp, ArmijoGoldsteinLS, BoundsEnforceLS, \
-            NonlinearBlockGS
+            NonlinearBlockGS, SqliteRecorder
 from openaerostruct.geometry.utils import generate_mesh
 from openaerostruct.geometry.geometry_group import Geometry
 from openaerostruct.aerodynamics.aero_groups import AeroPoint
-
 
 def compute_drag_polar(Mach, alphas, surfaces, trimmed=False):
 
@@ -28,12 +27,13 @@ def compute_drag_polar(Mach, alphas, surfaces, trimmed=False):
     indep_var_comp.add_output('re', val=1.e6, units='1/m')
     indep_var_comp.add_output('rho', val=0.38, units='kg/m**3')
     indep_var_comp.add_output('cg', val=np.zeros((3)), units='m')
+    
+    
     # Add this IndepVarComp to the problem model
     prob.model.add_subsystem('prob_vars',
         indep_var_comp,
         promotes=['*'])
-
-
+    
     for surface in surfaces:
         name = surface['name']
         # Create and add a group that handles the geometry for the
@@ -83,7 +83,7 @@ def compute_drag_polar(Mach, alphas, surfaces, trimmed=False):
     CLs = []
     CDs = []
     CMs = []
-
+    
     for a in alphas:
         prob['alpha'] =  a
         prob.run_model()
@@ -116,8 +116,8 @@ if __name__=='__main__':
 
     # Create a dictionary for the control surface
     aileron = {
-            'panels' = None
-            'hinge_line' = None
+            'panels' : None,
+            'hinge_line' : None
             }
 
     # Create a dictionary with info and options about the wing
@@ -147,7 +147,7 @@ if __name__=='__main__':
                                         # thickness
                 'with_viscous' : True,  # if true, compute viscous drag
                 'with_wave' : False,
-                'control_surfaces' = [aileron]
+                #'control_surfaces' : [aileron]
                 }
 
     # Create a dictionary to store options about the tail surface

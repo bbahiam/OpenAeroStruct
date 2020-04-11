@@ -15,7 +15,6 @@ from openaerostruct.aerodynamics.control_surfaces import ControlSurface
 
 from openmdao.api import Group, NonlinearBlockGS, DirectSolver, LinearBlockGS, LinearRunOnce, NewtonSolver, ScipyKrylov
 
-
 class AerostructGeometry(Group):
 
     def initialize(self):
@@ -111,27 +110,28 @@ class CoupledAS(Group):
             DisplacementTransferGroup(surface=surface),
             promotes_inputs=['nodes', 'mesh', 'disp'], promotes_outputs=['def_mesh'])
 
-        normals_name = 'undeflected_normals'
-        self.add_subsystem('aero_geom',
-            VLMGeometry(surface=surface),
-            promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', ('normals', normals_name), 'S_ref'])
-
         # Add control surfaces
         if 'control_surfaces' in surface:
-            for ctrl_surf in surface['control_surfaces']:
-                #TODO: fixed name only works with one control surface
-                deflected_normals_name = "normals"#"{}_normals".format(ctrl_surf['name'])
+            normals_name = 'undeflected_normals'
+            self.add_subsystem('aero_geom',
+                VLMGeometry(surface=surface),
+                promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', ('normals', normals_name), 'S_ref'])
+
+            for ctrl_surf in surface['control_surfaces']: # TODO: only works with one control surface
+                deflected_normals_name = 'normals'#"{}_normals".format(ctrl_surf['name'])
                 self.add_subsystem(ctrl_surf['name'],
                                    ControlSurface(surface=surface,
-                                                  panels=ctrl_surf['panels']),
-                                   promotes_inputs=[('normals', normals_name),'delta_aileron'],#,f"delta_{control_surf['name']}"],
+                                                  yLoc=ctrl_surf['yLoc'],
+                                                  cLoc=ctrl_surf['cLoc']),
+                                   promotes_inputs=[('undeflected_normals', normals_name),'delta_aileron'],#,f"delta_{control_surf['name']}"],
                                    promotes_outputs=[('deflected_normals', deflected_normals_name)]
                                    )
                 #iterate through names
                 normals_name = deflected_normals_name 
         else:
-            pass #No control surface to add
-
+            self.add_subsystem('aero_geom',
+                VLMGeometry(surface=surface),
+                promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', 'normals', 'S_ref'])
         #self.connect(normals_name,'normals')
 
 
@@ -149,19 +149,16 @@ class CoupledPerformance(Group):
         self.add_subsystem('aero_funcs',
             VLMFunctionals(surface=surface),
             promotes_inputs=['v', 'alpha', 'Mach_number', 're', 'rho', 'widths', 'cos_sweep', 'lengths', 'S_ref', 'sec_forces', 't_over_c'], promotes_outputs=['CDv', 'L', 'D', 'CL1', 'CDi', 'CD', 'CL'])
-
         if surface['fem_model_type'] == 'tube':
             self.add_subsystem('struct_funcs',
                 SpatialBeamFunctionals(surface=surface),
                 promotes_inputs=['thickness', 'radius', 'nodes', 'disp'], promotes_outputs=['thickness_intersects', 'vonmises', 'failure'])
-
         elif surface['fem_model_type'] == 'wingbox':
             self.add_subsystem('struct_funcs',
                 SpatialBeamFunctionals(surface=surface),
                 promotes_inputs=['Qz', 'J', 'A_enc', 'spar_thickness', 'htop', 'hbottom', 'hfront', 'hrear', 'nodes', 'disp'], promotes_outputs=['vonmises', 'failure'])
         else:
             raise NameError('Please select a valid `fem_model_type` from either `tube` or `wingbox`.')
-
 
 class AerostructPoint(Group):
 
@@ -232,8 +229,11 @@ class AerostructPoint(Group):
                 prom_in = ['load_factor']
             else:
                 prom_in = []
-
-            coupled.add_subsystem(name, coupled_AS_group, promotes_inputs=prom_in+['delta_aileron']) #TODO: fix hack
+            
+            if 'control_surfaces' in surface: #TODO: fix hack EDIT maybe fixed?
+                prom_in.append('delta_aileron')
+                
+            coupled.add_subsystem(name, coupled_AS_group, promotes_inputs=prom_in) 
 
         if self.options['compressible'] == True:
             aero_states = CompressibleVLMStates(surfaces=surfaces, rotational=rotational)
@@ -281,7 +281,11 @@ class AerostructPoint(Group):
         """
         ### End change of solver settings ###
         """
-        prom_in = ['v', 'alpha', 'rho', 'delta_aileron']#TODO: fix hack
+        prom_in = ['v', 'alpha', 'rho'] #TODO: fix hack - removed hack
+        
+        if 'control_surfaces' in surface:
+                prom_in.append('delta_aileron')
+                
         if self.options['compressible'] == True:
             prom_in.append('Mach_number')
 
