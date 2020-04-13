@@ -118,22 +118,20 @@ class CoupledAS(Group):
                 promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', ('normals', normals_name), 'S_ref'])
 
             for ctrl_surf in surface['control_surfaces']: # TODO: only works with one control surface
-                deflected_normals_name = 'normals'#"{}_normals".format(ctrl_surf['name'])
+                deflected_normals_name = 'normals'
                 self.add_subsystem(ctrl_surf['name'],
                                    ControlSurface(surface=surface,
                                                   yLoc=ctrl_surf['yLoc'],
-                                                  cLoc=ctrl_surf['cLoc']),
-                                   promotes_inputs=[('undeflected_normals', normals_name),'delta_aileron'],#,f"delta_{control_surf['name']}"],
+                                                  cLoc=ctrl_surf['cLoc'],
+                                                  antisymmetric=ctrl_surf['antisymmetric']),
+                                   promotes_inputs=[('undeflected_normals', normals_name),'delta_aileron','def_mesh'],
                                    promotes_outputs=[('deflected_normals', deflected_normals_name)]
                                    )
-                #iterate through names
                 normals_name = deflected_normals_name 
         else:
             self.add_subsystem('aero_geom',
                 VLMGeometry(surface=surface),
                 promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', 'normals', 'S_ref'])
-        #self.connect(normals_name,'normals')
-
 
         self.linear_solver = LinearRunOnce()
 
@@ -230,7 +228,7 @@ class AerostructPoint(Group):
             else:
                 prom_in = []
             
-            if 'control_surfaces' in surface: #TODO: fix hack EDIT maybe fixed?
+            if 'control_surfaces' in surface: # control surface addition
                 prom_in.append('delta_aileron')
                 
             coupled.add_subsystem(name, coupled_AS_group, promotes_inputs=prom_in) 
@@ -241,7 +239,11 @@ class AerostructPoint(Group):
         else:
             aero_states = VLMStates(surfaces=surfaces, rotational=rotational)
             prom_in = ['v', 'alpha', 'beta', 'rho']
-
+        
+        # If rotational, add in roll rate and cg
+        if rotational:
+            prom_in.extend(['omega','cg'])
+        
         # Add a single 'aero_states' component for the whole system within the
         # coupled group.
         coupled.add_subsystem('aero_states', aero_states,
@@ -281,14 +283,18 @@ class AerostructPoint(Group):
         """
         ### End change of solver settings ###
         """
-        prom_in = ['v', 'alpha', 'rho'] #TODO: fix hack - removed hack
+        prom_in = ['v', 'alpha', 'rho']
         
         if 'control_surfaces' in surface:
                 prom_in.append('delta_aileron')
                 
         if self.options['compressible'] == True:
             prom_in.append('Mach_number')
-
+        
+        # If rotational, add in roll rate and cg
+        if rotational:
+            prom_in.extend(['omega','cg'])
+            
         # Add the coupled group to the model problem
         self.add_subsystem('coupled', coupled, promotes_inputs=prom_in)
 
@@ -304,9 +310,22 @@ class AerostructPoint(Group):
         # Add functionals to evaluate performance of the system.
         # Note that only the interesting results are promoted here; not all
         # of the parameters.
-        self.add_subsystem('total_perf',
-                 TotalPerformance(surfaces=surfaces,
-                 user_specified_Sref=self.options['user_specified_Sref'],
-                 internally_connect_fuelburn=self.options['internally_connect_fuelburn']),
-                 promotes_inputs=['v', 'rho', 'empty_cg', 'total_weight', 'CT', 'speed_of_sound', 'R', 'Mach_number', 'W0', 'load_factor', 'S_ref_total'],
-                 promotes_outputs=['L_equals_W', 'fuelburn', 'CL', 'CD', 'CM', 'cg'])
+        if not rotational:
+            self.add_subsystem('total_perf',
+                     TotalPerformance(surfaces=surfaces,
+                     user_specified_Sref=self.options['user_specified_Sref'],
+                     internally_connect_fuelburn=self.options['internally_connect_fuelburn']),
+                     promotes_inputs=['v', 'rho', 'empty_cg', 'total_weight', 'CT', 'speed_of_sound', 'R', 'Mach_number', 'W0', 'load_factor', 'S_ref_total'],
+                     promotes_outputs=['L_equals_W', 'fuelburn', 'CL', 'CD', 'CM', 'cg'])
+        
+        elif rotational:
+            # In rotational case cannot take in empty_cg and calculate cg.
+            # Leads to a cycle between three groups (rotational aero needs 
+            # cg well before cg calculation)
+            self.add_subsystem('total_perf',
+                     TotalPerformance(surfaces=surfaces,
+                     user_specified_Sref=self.options['user_specified_Sref'],
+                     internally_connect_fuelburn=self.options['internally_connect_fuelburn'],
+                     rotational=self.options['rotational']),
+                     promotes_inputs=['v', 'rho', 'cg', 'CT', 'speed_of_sound', 'R', 'Mach_number', 'W0', 'load_factor', 'S_ref_total'],
+                     promotes_outputs=['L_equals_W', 'fuelburn', 'CL', 'CD', 'CM'])

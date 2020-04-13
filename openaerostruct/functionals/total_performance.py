@@ -18,10 +18,11 @@ class TotalPerformance(Group):
         self.options.declare('surfaces', types=list)
         self.options.declare('user_specified_Sref', types=bool)
         self.options.declare('internally_connect_fuelburn', types=bool, default=True)
-
+        self.options.declare('rotational',types=bool,default=False)
+        
     def setup(self):
         surfaces = self.options['surfaces']
-
+        
         if not self.options['user_specified_Sref']:
             self.add_subsystem('sum_areas',
                 SumAreas(surfaces=surfaces),
@@ -42,16 +43,25 @@ class TotalPerformance(Group):
              BreguetRange(surfaces=surfaces),
              promotes_inputs=['*structural_mass', 'CL', 'CD', 'CT', 'speed_of_sound', 'R', 'Mach_number', 'W0'],
              promotes_outputs=['fuelburn'])
-
-        self.add_subsystem('L_equals_W',
-             Equilibrium(surfaces=surfaces),
-             promotes_inputs=['CL', '*structural_mass', 'S_ref_total', 'W0', 'load_factor', 'rho', 'v'] + promote_fuelburn,
-             promotes_outputs=['L_equals_W', 'total_weight'])
-
-        self.add_subsystem('CG',
-             CenterOfGravity(surfaces=surfaces),
-             promotes_inputs=['*structural_mass', '*cg_location', 'total_weight', 'W0', 'empty_cg', 'load_factor'] + promote_fuelburn,
-             promotes_outputs=['cg'])
+        
+        # Rotational case can't solve for CG, rotational velocities require cg
+        # before this and leads to cycles between 3 groups 
+        if self.options['rotational']:
+            self.add_subsystem('L_equals_W',
+                 Equilibrium(surfaces=surfaces),
+                 promotes_inputs=['CL', '*structural_mass', 'S_ref_total', 'W0', 'load_factor', 'rho', 'v'] + promote_fuelburn,
+                 promotes_outputs=['L_equals_W'])
+            
+        else:
+            self.add_subsystem('L_equals_W',
+                 Equilibrium(surfaces=surfaces),
+                 promotes_inputs=['CL', '*structural_mass', 'S_ref_total', 'W0', 'load_factor', 'rho', 'v'] + promote_fuelburn,
+                 promotes_outputs=['L_equals_W', 'total_weight'])
+        
+            self.add_subsystem('CG',
+                 CenterOfGravity(surfaces=surfaces),
+                 promotes_inputs=['*structural_mass', '*cg_location', 'total_weight', 'W0', 'empty_cg', 'load_factor'] + promote_fuelburn,
+                 promotes_outputs=['cg'])
 
         self.add_subsystem('moment',
              MomentCoefficient(surfaces=surfaces),

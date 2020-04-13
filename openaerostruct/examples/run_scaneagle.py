@@ -28,12 +28,13 @@ num_x = 3
 # the mesh array.
 mesh_dict = {'num_y' : num_y,
              'num_x' : num_x,
-             'wing_type' : 'rect',
-             'symmetry' : True,
-             'span_cos_spacing' : 0.5,
-             'span' : 3.11,
-             'root_chord' : 0.3,
+             'wing_type' : 'CRM',
+             'symmetry' : True
              }
+             #'span_cos_spacing' : 0.5,
+             #'span' : 3.11,
+             #'root_chord' : 0.3,
+             #}
 
 mesh = generate_mesh(mesh_dict)
 

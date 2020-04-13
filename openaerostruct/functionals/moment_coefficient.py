@@ -117,7 +117,7 @@ class MomentCoefficient(ExplicitComponent):
         # Compute the normalized CM
         rho = inputs['rho']
         outputs['CM'] = M / (0.5 * rho * inputs['v']**2 * inputs['S_ref_total'] * self.MAC_wing)
-
+        
     def compute_partials(self, inputs, partials):
         cg = inputs['cg']
         rho = inputs['rho']

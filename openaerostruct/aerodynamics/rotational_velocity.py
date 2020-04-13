@@ -95,7 +95,7 @@ class RotationalVelocity(ExplicitComponent):
         cg = inputs['cg']
         omega = inputs['omega']
         c_pts = inputs['coll_pts']
-
+        
         surfaces = self.options['surfaces']
         idx = jdx = 0
         ii = self.system_size * 3

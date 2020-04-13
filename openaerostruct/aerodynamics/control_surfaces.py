@@ -5,29 +5,44 @@ from scipy.spatial.transform import Rotation as R
 from openmdao.api import ExplicitComponent
 
 class ControlSurface(ExplicitComponent):
+    """
+    Changes the panel surface normal vectors to account for control
+    surface rotation.
 
+    Parameters
+    ----------
+    delta_aileron : float
+        Control surface deflection angle in degrees.
+    undeflected_normals : numpy array
+        Normal vectors for the panels before control surface deflection.
+
+    Returns
+    -------
+    deflected_normals: numpy array
+        Normal vectors for the panels after control surface deflection.
+    """
+    
     def initialize(self):
         self.options.declare('surface', types=dict)  # Is this needed?
-        #self.options.declare('panels', types=list)
         self.options.declare('yLoc',types=list) # Index of Ypos start of aileron, 0=outboard, ny=centerline
-        self.options.declare('cLoc',types=list) # Chordwise positions, example [0.75,0.8] is
-                                                                        # 0.75c at 1st y pos, 0.8c at 2nd y pos
-                                                                        
+        self.options.declare('cLoc',types=list) # Chordwise positions 
+        self.options.declare('antisymmetric',types=bool) # Antisymmetry (like ailerons)
+        
     def setup(self):
         self.surface = surface = self.options['surface']
-        #self.panels = panels = self.options['panels']
         self.yLoc = self.options['yLoc']
         self.cLoc = self.options['cLoc']
+        self.antisymmetric = self.options['antisymmetric']
         
-        mesh = surface['mesh']
+        mesh = self.surface['mesh']
         nx = self.nx = mesh.shape[0]
         ny = self.ny = mesh.shape[1]
         
-        self.add_input('delta_aileron', val=0)
+        self.add_input('delta_aileron', val=0, units='deg')
         self.add_input('undeflected_normals', val=np.zeros((nx-1, ny-1, 3)))
+        self.add_input('def_mesh', val=np.zeros((nx, ny, 3)), units='m')
         self.add_output('deflected_normals', val=np.zeros((nx-1, ny-1, 3)))
 
-        #rows, cols = panels
         self.declare_partials('deflected_normals',
                               'undeflected_normals')
         
@@ -42,13 +57,32 @@ class ControlSurface(ExplicitComponent):
         surface = self.surface
         yLoc = self.yLoc
         cLoc = self.cLoc
+        antisymmetric = self.antisymmetric
         
-        mesh = surface['mesh']
+        mesh = inputs['def_mesh']
         
         if deflection != 0:
-            # Find which panels affected by control surface
-            y0 = yLoc[0]; # The starting y position of the aileron
-            y1 = yLoc[1]; # The ending y position of the aileron
+############################### Get hinge lines ###############################             
+            if antisymmetric:
+                y0 = -np.max(yLoc)-1; # The starting y position of the aileron
+                y1 = -np.min(yLoc)-1; # The ending y position of the aileron
+                        
+                mesh0 = mesh[:,y0,:] # The chordwise mesh at the 1st y pos
+                mesh1 = mesh[:,y1,:] # The chordwise mesh at the 2nd y pos
+                
+                c0 = np.linalg.norm(mesh0[0,:]-mesh0[-1,:]) # Chord length at 1st y pos
+                c1 = np.linalg.norm(mesh1[0,:]-mesh1[-1,:]) # Chord length at 2nd y pos
+                
+                u0 = (mesh0[-1,:]-mesh0[0,:])/c0 # Unit vector from LE to TE for chord1
+                u1 = (mesh1[-1,:]-mesh1[0,:])/c1 # Unit vector from LE to TE for chord2
+                
+                h1 = self.h1 = (mesh1[0,:] + cLoc[1]*c1*u1) # second hinge point
+                h0 = self.h0 = (mesh0[0,:] + cLoc[0]*c0*u0) # first hinge point
+                mirror_hinge = h0 - h1 # hinge line
+                mirror_hinge /= np.linalg.norm(mirror_hinge)
+            
+            y0 = np.min(yLoc); # The starting y position of the aileron
+            y1 = np.max(yLoc); # The ending y position of the aileron
                     
             mesh0 = mesh[:,y0,:] # The chordwise mesh at the 1st y pos
             mesh1 = mesh[:,y1,:] # The chordwise mesh at the 2nd y pos
@@ -62,8 +96,9 @@ class ControlSurface(ExplicitComponent):
             h1 = self.h1 = (mesh1[0,:] + cLoc[1]*c1*u1) # second hinge point
             h0 = self.h0 = (mesh0[0,:] + cLoc[0]*c0*u0) # first hinge point
             hinge = h1 - h0 # hinge line
+            hinge /= np.linalg.norm(hinge)
             
-            # Mesh of the control surface        
+########################## Find affected mesh points ########################## 
             self.cs_mesh = cs_mesh = mesh[:,np.min(yLoc):np.max(yLoc)+1,:]
             
             # X and Y locations of the hingeline
@@ -83,6 +118,7 @@ class ControlSurface(ExplicitComponent):
                             axis=2)
             cs_A = 0.5*np.sqrt(np.sum(cs_normals**2, axis=2))
             
+######################## Find deflection interpolation ######################## 
             # Each panel has 4 points
             # If all 4 are downstream, normal is rotated by commanded deflection
             # If 0<points<=3 are downstream, normal rotated by area-ratio * deflection
@@ -146,7 +182,8 @@ class ControlSurface(ExplicitComponent):
             # Cache for partial derivs
             self.cs_panels = cs_panels
             self.hinge = hinge
-
+            self.mirror_hinge = mirror_hinge
+            
             # Calculated rotated normals
             for i in range(np.size(cs_panels,axis=0)):
                 for j in range(np.size(cs_panels,axis=1)):
@@ -156,12 +193,17 @@ class ControlSurface(ExplicitComponent):
                         interp_defl = deflection*cs_panels[i,j]
                         rot = R.from_rotvec(hinge*interp_defl)
                         new_normals[i,k,:] = rot.apply(normals[i,k,:])
-                        
+
+                        if antisymmetric:
+                            rot = R.from_rotvec(mirror_hinge*interp_defl)
+                            new_normals[i,-k-1,:] = rot.apply(normals[i,-k-1,:])
+
             outputs['deflected_normals'] = new_normals
+            
             
         else:
             outputs['deflected_normals'] = new_normals
-        
+
     def compute_partials(self, inputs, partials):
             
         if inputs['delta_aileron'] != 0:
@@ -170,6 +212,8 @@ class ControlSurface(ExplicitComponent):
             cs_panels = self.cs_panels
             hinge = self.hinge
             deflection = self.rot_ang
+            antisymmetric = self.antisymmetric 
+            mirror_hinge = self.mirror_hinge
             
             normals = inputs['undeflected_normals']
             # Use complex step to get derivatives
@@ -192,15 +236,10 @@ class ControlSurface(ExplicitComponent):
                     for j in range(np.size(cs_panels,axis=1)):
                         if cs_panels[i,j] != 0:
                             k = j+np.min(yLoc) # y index for normals
-                            
-                            interp_defl = deflection*cs_panels[i,j]
-                            
-                            # Define the rotation vector
-                            rot_vec = hinge*interp_defl
-                            
+                                                        
                             # Get angle magnitude and axis
-                            rot_ang = np.linalg.norm(rot_vec)
-                            rot_axis = rot_vec/rot_ang
+                            rot_ang = deflection*cs_panels[i,j]
+                            rot_axis = hinge
                             
                             # Convert to rotation matrix
                             rot_K = np.array([[0,-rot_axis[2],rot_axis[1]],
@@ -212,6 +251,20 @@ class ControlSurface(ExplicitComponent):
                             
                             new_normals[i,k,:] = np.dot(rot_mat, flatNorms[i,k,:])
                             
+                            if antisymmetric:
+                                # Get angle magnitude and axis
+                                rot_ang = deflection*cs_panels[i,j]
+                                rot_axis = mirror_hinge
+                                
+                                # Convert to rotation matrix
+                                rot_K = np.array([[0,-rot_axis[2],rot_axis[1]],
+                                                  [rot_axis[2],0,-rot_axis[0]],
+                                                  [-rot_axis[1],rot_axis[0],0]])
+            
+                                rot_mat = np.eye(3) + np.sin(rot_ang)*rot_K \
+                                            + (1-np.cos(rot_ang))*np.dot(rot_K,rot_K)
+                                
+                                new_normals[i,-k-1,:] = np.dot(rot_mat, flatNorms[i,-k-1,:])
                             
                 deriv = np.imag(new_normals/h)
                 deriv = deriv.flatten()
@@ -250,6 +303,24 @@ class ControlSurface(ExplicitComponent):
                                     + (1-np.cos(rot_ang))*np.dot(rot_K,rot_K)
                         
                         new_normals[i,k,:] = np.dot(rot_mat, normals[i,k,:])
+                        
+                        if antisymmetric:
+                            # Define the rotation vector
+                            rot_vec = mirror_hinge*-interp_defl
+                                
+                            # Get angle magnitude and axis
+                            rot_ang = np.linalg.norm(rot_vec)
+                            rot_axis = rot_vec/rot_ang
+                                
+                            # Convert to rotation matrix
+                            rot_K = np.array([[0,-rot_axis[2],rot_axis[1]],
+                                              [rot_axis[2],0,-rot_axis[0]],
+                                              [-rot_axis[1],rot_axis[0],0]])
+            
+                            rot_mat = np.eye(3) + np.sin(rot_ang)*rot_K \
+                                            + (1-np.cos(rot_ang))*np.dot(rot_K,rot_K)
+
+                            new_normals[i,-k-1,:] = np.dot(rot_mat, normals[i,-k-1,:])
 
             partials['deflected_normals','delta_aileron'] = np.imag(new_normals/h)
             deflectionCom -= complex(0,h)

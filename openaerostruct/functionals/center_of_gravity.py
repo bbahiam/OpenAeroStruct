@@ -86,7 +86,7 @@ class CenterOfGravity(ExplicitComponent):
         # Compute the total cg of the aircraft based on the empty weight cg and
         # the structures cg. Here we assume the fuel weight is at the cg.
         outputs['cg'] = (W0_cg + spar_cg) / (inputs['total_weight'] / g - inputs['fuelburn'])
-
+        
     def compute_partials(self, inputs, partials):
 
         g = grav_constant * inputs['load_factor']

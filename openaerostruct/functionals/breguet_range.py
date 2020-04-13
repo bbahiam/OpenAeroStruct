@@ -80,8 +80,12 @@ class BreguetRange(ExplicitComponent):
 
         CL = inputs['CL']
         CD = inputs['CD']
-
-        outputs['fuelburn'] = (W0 + Ws) * (np.exp(R * CT / a / M * CD / CL) - 1)
+        
+        # quick fix for CL = 0 case
+        if CL == 0.:
+            outputs['fuelburn'] = 0.
+        else:
+            outputs['fuelburn'] = (W0 + Ws) * (np.exp(R * CT / a / M * CD / CL) - 1)
 
     def compute_partials(self, inputs, partials):
 
