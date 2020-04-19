@@ -28,13 +28,12 @@ num_x = 3
 # the mesh array.
 mesh_dict = {'num_y' : num_y,
              'num_x' : num_x,
-             'wing_type' : 'CRM',
-             'symmetry' : True
+             'wing_type' : 'rect',
+             'symmetry' : True,
+             'span_cos_spacing' : 0.5,
+             'span' : 3.11,
+             'root_chord' : 0.3,
              }
-             #'span_cos_spacing' : 0.5,
-             #'span' : 3.11,
-             #'root_chord' : 0.3,
-             #}
 
 mesh = generate_mesh(mesh_dict)
 
@@ -207,7 +206,7 @@ prob.model.add_objective('AS_point_0.fuelburn', scaler=.1)
 prob.setup()
 
 # Use this if you just want to run analysis and not optimization
-# prob.run_model()
+#prob.run_model()
 
 # Actually run the optimization problem
 prob.run_driver()

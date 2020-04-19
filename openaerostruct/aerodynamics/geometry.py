@@ -125,14 +125,14 @@ class VLMGeometry(ExplicitComponent):
         # Compute the widths of each panel at the quarter-chord line
         quarter_chord = 0.25 * mesh[-1] + 0.75 * mesh[0]
         widths = np.linalg.norm(quarter_chord[1:, :] - quarter_chord[:-1, :], axis=1)
-
+        
         # Compute the numerator of the cosine of the sweep angle of each panel
         # (we need this for the viscous drag dependence on sweep, and we only compute
         # the numerator because the denominator of the cosine fraction is the width,
         # which we have already computed. They are combined in the viscous drag
         # calculation.)
         cos_sweep = np.linalg.norm(quarter_chord[1:, [1,2]] - quarter_chord[:-1, [1,2]], axis=1)
-
+        
         # Compute the length of each chordwise set of mesh points through the camber line.
         dx = mesh[1:, :, 0] - mesh[:-1, :, 0]
         dy = mesh[1:, :, 1] - mesh[:-1, :, 1]
@@ -145,9 +145,12 @@ class VLMGeometry(ExplicitComponent):
             mesh[:-1,  1:, :] - mesh[1:, :-1, :],
             mesh[:-1, :-1, :] - mesh[1:,  1:, :],
             axis=2)
-
+        
         # Normalize the normal vectors
         norms = np.sqrt(np.sum(normals**2, axis=2))
+        
+        #import pdb; pdb.set_trace()   
+        
         for j in range(3):
             normals[:, :, j] /= norms
 

@@ -48,19 +48,38 @@ class SectionPropertiesTube(ExplicitComponent):
         self.set_check_partial_options(wrt='*', method='cs')
 
     def compute(self, inputs, outputs):
-        pi = np.pi
-
-        # Add thickness to the interior of the radius.
-        # The outer radius is the inputs['radius'] amount.
-        r1 = inputs['radius'] - inputs['thickness']
-        r2 = inputs['radius']
-
-        # Compute the area, area moments of inertia, and polar moment of inertia
-        outputs['A'] = pi * (r2**2 - r1**2)
-        outputs['Iy'] = pi * (r2**4 - r1**4) / 4.
-        outputs['Iz'] = pi * (r2**4 - r1**4) / 4.
-        outputs['J'] = pi * (r2**4 - r1**4) / 2.
-
+        
+        if 'tube_Xsec' in self.options['surface']:
+            if self.options['surface']['tube_Xsec'] == 'rect':
+                #    ________________________
+                #   |                       |
+                #   |                       | h
+                #   |                       |
+                #   |_______________________|
+                #               b
+                
+                b = inputs['radius']
+                h = inputs['thickness']
+                
+                outputs['A'] = b*h
+                outputs['Iy'] = 1e0*(h * b**3) / 12.
+                outputs['Iz'] = (h**3 * b) / 12.                
+                outputs['J'] = h * (b**3) * ((1/3) - (0.21*h/b) * \
+                               (1 - ((h**4) / (12 * (b**4)))))
+        else:
+            pi = np.pi
+    
+            # Add thickness to the interior of the radius.
+            # The outer radius is the inputs['radius'] amount.
+            r1 = inputs['radius'] - inputs['thickness']
+            r2 = inputs['radius']
+    
+            # Compute the area, area moments of inertia, and polar moment of inertia
+            outputs['A'] = pi * (r2**2 - r1**2)
+            outputs['Iy'] = pi * (r2**4 - r1**4) / 4.
+            outputs['Iz'] = pi * (r2**4 - r1**4) / 4.
+            outputs['J'] = pi * (r2**4 - r1**4) / 2.
+    
     def compute_partials(self, inputs, partials):
         pi = np.pi
         radius = inputs['radius'].real

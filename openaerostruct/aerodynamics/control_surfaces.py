@@ -117,7 +117,7 @@ class ControlSurface(ExplicitComponent):
                             cs_mesh[:-1, :-1, :] - cs_mesh[1:,  1:, :],
                             axis=2)
             cs_A = 0.5*np.sqrt(np.sum(cs_normals**2, axis=2))
-            
+
 ######################## Find deflection interpolation ######################## 
             # Each panel has 4 points
             # If all 4 are downstream, normal is rotated by commanded deflection
@@ -182,7 +182,9 @@ class ControlSurface(ExplicitComponent):
             # Cache for partial derivs
             self.cs_panels = cs_panels
             self.hinge = hinge
-            self.mirror_hinge = mirror_hinge
+            
+            if antisymmetric:
+                self.mirror_hinge = mirror_hinge
             
             # Calculated rotated normals
             for i in range(np.size(cs_panels,axis=0)):
@@ -203,7 +205,7 @@ class ControlSurface(ExplicitComponent):
             
         else:
             outputs['deflected_normals'] = new_normals
-
+        
     def compute_partials(self, inputs, partials):
             
         if inputs['delta_aileron'] != 0:

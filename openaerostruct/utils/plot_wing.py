@@ -38,8 +38,6 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib.animation as manimation
 
-from traceback import print_exc
-
 #####################
 # User-set parameters
 #####################
@@ -93,6 +91,8 @@ class Display(object):
 
     def load_db(self):
         cr = self.case_reader = SqliteCaseReader(self.db_name, pre_load=True)
+        
+        import pdb; pdb.set_trace();
         last_case = next(reversed(cr.get_cases('driver')))
 
         names = _get_surf_names(cr)

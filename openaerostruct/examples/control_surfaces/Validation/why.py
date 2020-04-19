@@ -9,19 +9,22 @@ from openmdao.api import IndepVarComp, Problem, Group, SqliteRecorder
 from openaerostruct.utils.constants import grav_constant
 
 import pdb
-# Create a dictionary to store options about the surface
-mesh_dict = {'num_y' : 21,
-             'num_x' : 7,
-             'wing_type' : 'CRM',
-             'symmetry' : False,
-             'num_twist_cp' : 5}
+from plotting import meshPlot
 
-mesh, twist_cp = generate_mesh(mesh_dict)
+# Create a dictionary to store options about the surface
+mesh_dict = {'num_y' : 13,
+             'num_x' : 7,
+             'wing_type' : 'rect',
+             'symmetry' : False,
+             'span' : 1.2192,
+             'chord' : 7*0.0254}
+
+mesh = generate_mesh(mesh_dict)
 
 aileron = {
            'name': 'aileron',
            'yLoc': [1,2],
-           'cLoc': [0.8,0.75],
+           'cLoc': [0.7,0.7],
            'antisymmetric' : True
            }
 
@@ -34,11 +37,11 @@ surface = {
                                      # can be 'wetted' or 'projected'
             'fem_model_type' : 'tube',
 
-            'thickness_cp' : np.array([.1, .2, .3]),
-
-            'twist_cp' : twist_cp,
+            'thickness_cp' : np.array([.1]),
+            'radius_cp' : np.array([.1]),
+            'twist_cp' : np.array([0.]),
             'mesh' : mesh,
-
+            'taper' : 0.45,
             'control_surfaces': [aileron],
 
             # Aerodynamic performance of the lifting surface at
@@ -53,19 +56,19 @@ surface = {
             # Airfoil properties for viscous drag calculation
             'k_lam' : 0.05,         # percentage of chord with laminar
                                     # flow, used for viscous drag
-            't_over_c_cp' : np.array([0.15]),      # thickness over chord ratio (NACA0015)
+            't_over_c_cp' : np.array([0.12]),      # thickness over chord ratio (NACA0015)
             'c_max_t' : .303,       # chordwise location of maximum (NACA0015)
                                     # thickness
             'with_viscous' : True,
             'with_wave' : False,     # if true, compute wave drag
 
             # Structural values are based on aluminum 7075
-            'E' : 70.e9,            # [Pa] Young's modulus of the spar
-            'G' : 30.e9,            # [Pa] shear modulus of the spar
+            'E' : 120.e9,            # [Pa] Young's modulus of the spar
+            'G' : 2.2e9,            # [Pa] shear modulus of the spar
             'yield' : 500.e6 / 2.5, # [Pa] yield stress divided by 2.5 for limiting case
             'mrho' : 3.e3,          # [kg/m^3] material density
             'fem_origin' : 0.35,    # normalized chordwise location of the spar
-            'wing_weight_ratio' : 2.,
+            'wing_weight_ratio' : 1.25,
             'struct_weight_relief' : False,    # True to add the weight of the structure to the loads on the structure
             'distributed_fuel_weight' : False,
             # Constraints
@@ -83,7 +86,7 @@ indep_var_comp.add_output('Mach_number', val=0.84)
 indep_var_comp.add_output('re', val=1.e6, units='1/m')
 indep_var_comp.add_output('rho', val=0.38, units='kg/m**3')
 indep_var_comp.add_output('CT', val=grav_constant * 17.e-6, units='1/s')
-indep_var_comp.add_output('R', val=11.165e6, units='m')
+indep_var_comp.add_output('R', val=0., units='m')
 indep_var_comp.add_output('W0', val=0.4 * 3e5,  units='kg')
 indep_var_comp.add_output('speed_of_sound', val=295.4, units='m/s')
 indep_var_comp.add_output('load_factor', val=1.)
@@ -129,10 +132,10 @@ from openmdao.api import ScipyOptimizeDriver
 prob.driver = ScipyOptimizeDriver()
 prob.driver.options['tol'] = 1e-9
 
-recorder = SqliteRecorder("aerostruct.db")
-prob.driver.add_recorder(recorder)
-prob.driver.recording_options['record_derivatives'] = True
-prob.driver.recording_options['includes'] = ['*']
+#recorder = SqliteRecorder("aerostruct.db")
+#prob.driver.add_recorder(recorder)
+#prob.driver.recording_options['record_derivatives'] = True
+#prob.driver.recording_options['includes'] = ['*']
 
 # Setup problem and add design variables, constraint, and objective
 prob.model.add_design_var('wing.twist_cp', lower=-10., upper=15.)
@@ -146,30 +149,43 @@ prob.model.add_constraint('AS_point_0.L_equals_W', equals=0.)
 prob.model.add_objective('AS_point_0.fuelburn', scaler=1e-5)
 
 # Set up the problem
-prob.setup(check=True)
 
-prob['v'] = 120.
-prob['Mach_number'] = 120./prob['speed_of_sound']
-prob['alpha'] = 0.
-prob['delta_aileron'] = 12.5
-# Only run analysis
-prob.run_model()
-#prob.check_partials(includes=['aileron'])
+dels = np.array([-10.,-5.,0.,5.,10.])
+CMs = np.zeros_like(dels)
 
-#from openmdao.api import view_model
-#view_model(prob)
-#pdb.set_trace()
+counter = 0
+for i,da in enumerate(dels):
+    prob.setup(check=True)
+    prob.model.AS_point_0.coupled.nonlinear_solver.options['maxiter'] = 300
+    
+    prob['alpha'] = 0.012
+    prob['v'] = 44.6655628
+    prob['delta_aileron'] = da
+    prob.run_model()
+    
+    meshPlot(prob['AS_point_0.coupled.wing.def_mesh'],deformed=True,\
+             name=None,azim=90,elev=0)
+    print(prob['AS_point_0.total_perf.moment.CM'][0])
 
-# Run optimization
-#prob.run_driver()
-
-print()
-print('CL:', prob['AS_point_0.wing_perf.CL'])
-print('CD:', prob['AS_point_0.wing_perf.CD'])
-print('CM:', prob['AS_point_0.total_perf.moment.CM'])
-
-# prob["AS_point_0.coupled.wing.undeflected_normals"]
-# prob["AS_point_0.coupled.aero_states.mtx_rhs.wing_normals"]
-# prob["AS_point_0.coupled.aero_states.wing_normals"]
-# prob["AS_point_0.coupled.wing.normals"]
-# AS_point_0.total_perf.moment.CM
+#vels = np.array([28.24898228, 34.59779617, 39.95009387, 44.6655628 , 48.92867258,
+#       52.84900661, 56.49796457, 59.9251408 , 63.16664468, 66.24973585,
+#       69.19559235])
+#dels = np.array([-10.,-5.,0.,5.,10.])
+#
+#D,V = np.meshgrid(dels,vels)
+#
+#CM = np.ones((len(vels),len(dels)))
+#
+#for i,v in enumerate(vels):
+#    for j,d in enumerate(dels):
+#        prob['v'] = v
+#        prob['Mach_number'] = v/prob['speed_of_sound']
+#        prob['delta_aileron'] = d
+#        
+#        prob['v'] = 100.
+#        prob['Mach_number'] = v/prob['speed_of_sound']
+#        prob['delta_aileron'] = 12.5
+#        # Run the model
+#        prob.run_model()
+#        
+#        CM[i,j] = prob['AS_point_0.total_perf.moment.CM'][0]     

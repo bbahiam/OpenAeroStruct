@@ -10,6 +10,7 @@ from openmdao.api import IndepVarComp, Problem, Group, SqliteRecorder, \
                             
 from openaerostruct.utils.constants import grav_constant
 
+from plot_tools import surfForcePlot, meshPlot
 
 """
     Takes a control surface deflection and gives the instantaneous moment.
@@ -34,7 +35,7 @@ mesh, twist_cp = generate_mesh(mesh_dict)
 # Create a dictionary for the control surface
 aileron = {
        'name': 'aileron',
-       'yLoc': [1,4],       # Start and end chordwise mesh points for the surface
+       'yLoc': [2,4],       # Start and end chordwise mesh points for the surface
        'cLoc': [0.75,0.75],  # Local chord percentage of the hinge location
        'antisymmetric': True # Creates CS mirrored across XZ with opposite/equal deflections
        }
@@ -156,117 +157,14 @@ prob.setup(check=True)
 # View the model
 # n2(prob)
 
+prob['alpha'] = 2.
 # Run the model
 prob.run_model()
 
 print()
-print('CL:', prob['AS_point_0.wing_perf.CL'])
-print('CD:', prob['AS_point_0.wing_perf.CD'])
+#print('CL:', prob['AS_point_0.wing_perf.CL'])
+#print('CD:', prob['AS_point_0.wing_perf.CD'])
 print('CM:', prob['AS_point_0.total_perf.moment.CM'])
 
 
-def actualPlots(problem):
-    from mpl_toolkits.mplot3d import Axes3D  
-    # Axes3D import has side effects, it enables using projection='3d' in add_subplot
-    import matplotlib.pyplot as plt
-    from matplotlib import cm
-    from matplotlib.ticker import LinearLocator, FormatStrFormatter
-    import pdb
-    
-    mesh = prob[point_name+'.coupled.'+name+'.mesh']
-    def_mesh = prob[point_name+'.coupled.'+name+'.def_mesh']
-    forces = prob['AS_point_0.coupled.aero_states.wing_mesh_point_forces']
-    
-    Fx = forces[:,:,0]
-    Fy = forces[:,:,1]
-    Fz = forces[:,:,2]
-    
-    fx = Fx/Fx.max()
-    fy = Fy/Fy.max()
-    fz = Fz/Fz.max()
-    
-    #X1 = mesh[:,:,0];
-    #Y1 = mesh[:,:,1];
-    #Z1 = mesh[:,:,2];
-    
-    X2 = def_mesh[:,:,0];
-    Y2 = def_mesh[:,:,1];
-    Z2 = def_mesh[:,:,2];
-    
-    # Create cubic bounding box to simulate equal aspect ratio
-    max_range = np.array([X2.max()-X2.min(), Y2.max()-Y2.min(), Z2.max()-Z2.min()]).max()
-    Xb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() + 0.5*(X2.max()+X2.min())
-    Yb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][1].flatten() + 0.5*(Y2.max()+Y2.min())
-    Zb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() + 0.5*(Z2.max()+Z2.min())    
-       
-    # Plot X forces
-    fig1 = plt.figure(1,figsize=(5,4),dpi=300)
-    ax1 = fig1.gca(projection='3d')
-    
-    surf1 = ax1.plot_surface(
-        X2, Y2, Z2, rstride=1, cstride=1,
-        facecolors=cm.coolwarm(fx),
-        linewidth=0, antialiased=False, shade=False)
-    
-    for xb, yb, zb in zip(Xb, Yb, Zb):
-       ax1.plot([xb], [yb], [zb], 'w')
-    ax1.plot_wireframe(X2,Y2,Z2,color='k',linewidth=0.25)
-    fig1.colorbar(surf1, shrink=0.5, aspect=5)
-    ax1.set_xlabel('X')
-    ax1.set_ylabel('Y')
-    ax1.set_zlabel('Z')
-    ax1.elev=90.
-    ax1.azim=255.
-    ax1.set_zlim([-2.,2.])
-    plt.grid()
-    plt.savefig('surf_fx.png')
-    plt.show()
-    
-    # Plot Y forces
-    fig2 = plt.figure(1,figsize=(5,4),dpi=300)
-    ax2 = fig2.gca(projection='3d')
-    
-    surf2 = ax2.plot_surface(
-        X2, Y2, Z2, rstride=1, cstride=1,
-        facecolors=cm.coolwarm(fy),
-        linewidth=0, antialiased=False, shade=False)
-    for xb, yb, zb in zip(Xb, Yb, Zb):
-       ax2.plot([xb], [yb], [zb], 'w')
-    ax2.plot_wireframe(X2,Y2,Z2,color='k',linewidth=0.25)
-
-    fig2.colorbar(surf1, shrink=0.5, aspect=5)
-    ax2.set_xlabel('X')
-    ax2.set_ylabel('Y')
-    ax2.set_zlabel('Z')
-    ax2.elev=25.
-    ax2.azim=255.
-    ax2.set_zlim([-2.,2.])
-    plt.grid()
-    plt.savefig('surf_fy.png')
-    plt.show()
-    
-    # Plot Z forces
-    fig3 = plt.figure(1,figsize=(5,4),dpi=300)
-    ax3 = fig3.gca(projection='3d')
-    
-    surf3 = ax3.plot_surface(
-        X2, Y2, Z2, rstride=1, cstride=1,
-        facecolors=cm.coolwarm(fz),
-        linewidth=0, antialiased=False, shade=False)
-    for xb, yb, zb in zip(Xb, Yb, Zb):
-       ax3.plot([xb], [yb], [zb], 'w')
-    ax3.plot_wireframe(X2,Y2,Z2,color='k',linewidth=0.25)
-    ax3.set_xlabel('X')
-    ax3.set_ylabel('Y')
-    ax3.set_zlabel('Z')
-    ax3.elev=25.
-    ax3.azim=255.
-    ax3.set_zlim([-2.,2.])
-    fig3.colorbar(surf1, shrink=0.5, aspect=5)
-
-
-    plt.grid()
-    plt.savefig('surf_fz.png')
-    plt.show()
-
-actualPlots(prob)
+#surfForcePlot(prob)
