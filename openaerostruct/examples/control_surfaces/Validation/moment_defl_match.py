@@ -13,7 +13,7 @@ from openaerostruct.utils.constants import grav_constant
 #from plotting import surfForcePlot, meshPlot
 
 import pdb
-
+import time
 """
     Takes a control surface deflection and gives the instantaneous moment.
     
@@ -24,7 +24,7 @@ import pdb
         -View moment
         
 """
-
+start = time.time()
 ##############################################################################
 #                                  GEOMETRY                                  #
 ##############################################################################
@@ -41,12 +41,12 @@ cg_loc = np.array([0.38*rc,0,0])
 
 # Testing conditions
 dels = np.array([-10.,-5.,0.,5.,10.])
-qvec = np.array([10,15,20,25,30,35,40,45,50,55,60]) * 47.8803 # maybe ad 0.07 = q too
+qvec = np.array([0.1,10,15,20,25,30,35,40,45,50,55]) * 47.8803 # maybe ad 0.07 = q too
 alpha = 0.012 # From Kirsten Wind Tunnel page
 rho = 1.2
 vels = np.sqrt(2*qvec/rho)
 
-n = 3
+n = 4
 num_y = n*(10)+1
 num_x = 7
 
@@ -60,96 +60,26 @@ mesh_dict = {'num_y' : num_y,
 
 mesh = generate_mesh(mesh_dict)
 
-##############################################################################
-#                                 SPAR SETUP                                 #
-##############################################################################
-yvec = mesh[0,:,1]
-ys = np.array([0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]) * b/2
 
-# For straight wing
-GJ_straight_data = np.array([0.006335115864527629,
-                       0.005493761140819965,
-                       0.00398217468805704,
-                       0.002713012477718357,
-                       0.0017718360071301217,
-                       0.0011158645276292314,
-                       0.0007165775401069465,
-                       0.00044563279857396873,
-                       0.00028877005347592924,
-                       0.00020320855614972683,
-                       0.00018894830659535976])*0.00286981466*1e-3 # Going from lb-in^2 to N-m^2
+###############################################################################
+#                                   SPAR                                      #
+###############################################################################                     0 b/2    0.25 b/2        0.5 b/2     0.75 b/2      1 b/2
+ys = np.array([0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1])
+yv = np.linspace(0,1,25)
+struc = np.array([1.3,1.27,1.2,1.135,1.09,1.05,1.03,1.02,1.011,1,1])
+data_swp = np.array([31.56179775, 27.20224719, 19.56179775, 13.49438202,  8.95505618,
+        5.62921348,  3.42696629,  2.03370787,  1.31460674,  1.04494382, 1.])
+fit_swp = np.polyfit(ys,data_swp,3)
+j_swp = np.polyval(fit_swp,yv)
+r_swp = (2*j_swp/np.pi)**(1/4)
+r_swp = np.hstack((np.flip(r_swp)[:-1],r_swp))
 
-EI_straight_data = np.array([0.007247771836007131,
-                             0.006221033868092692,
-                             0.0044242424242424225,
-                             0.0030124777183600706,
-                             0.0019999999999999983,
-                             0.001286987522281638,
-                             0.0008163992869875195,
-                             0.0005169340463458075,
-                             0.0003458110516933975,
-                             0.00026024955436719857,
-                             0.0002459893048128263])*0.00286981466*1e-3
-
-GJ_straight_fit = np.polyfit(ys,GJ_straight_data,3)
-GJ_straight = np.polyval(GJ_straight_fit,np.abs(yvec))
-
-EI_straight_fit = np.polyfit(ys,EI_straight_data,3)
-EI_straight = np.polyval(EI_straight_fit,np.abs(yvec))
-
-G = 50.e9
-spar_radius_straight = np.array([0.18*0.0254,0.28*0.0254,0.18*0.0254])
-
-t = np.linspace(0.18*0.0254,0.28*0.0254,int((num_y-1)/2)+1)
-t = np.hstack((t,np.flip(t)[1:]))
-
-Gs = (2*GJ_straight)/(np.pi * t**4)
-spar_thickness_straight = spar_radius_straight
-
-#G_str = np.sum((2*GJ_straight)/(np.pi * spar_radius_straight**4))/len(yvec)
-
-
-
-GJ_swept_data = np.array([0.010014260249554367,
-                     0.00863101604278075,
-                     0.006206773618538325,
-                     0.004281639928698752,
-                     0.0028413547237076623,
-                     0.0017860962566844905,
-                     0.0010873440285204955,
-                     0.0006452762923351146,
-                     0.00041711229946523633,
-                     0.00033155080213903045,
-                     0.0003172905525846599])*0.00286981466*1e-3 # Going from lb-in^2 to N-m^2
-    
-EI_swept_data = np.array([0.011454545454545457,
-                          0.009843137254901962,
-                          0.007062388591800359,
-                          0.004852049910873438,
-                          0.0032406417112299454,
-                          0.0020570409982174666,
-                          0.0012584670231729003,
-                          0.0007450980392156824,
-                          0.00047415329768270287,
-                          0.0003743315508021386,
-                          0.00040285204991086926])*0.00286981466*1e-3
-
-GJ_swept_fit = np.polyfit(ys,GJ_swept_data,3)
-GJ_swept = np.polyval(GJ_swept_fit,np.abs(yvec))
-
-EI_swept_fit = np.polyfit(ys,EI_swept_data,3)
-EI_swept = np.polyval(EI_swept_fit,np.abs(yvec))
-
-spar_radius_swept = ((2*GJ_swept)/(np.pi*G))**(1/4)
-spar_thickness_swept = spar_radius_swept
-
-E_swp = np.sum((4*EI_swept)/(np.pi * spar_radius_swept**4))/len(yvec)
-
-
-spar_b = np.array([0.002,0.0038,0.002])
-spar_a = np.array([0.00088,0.003,0.00088])
-E_swp = 125.e9
-
+data_str = np.array([28.43362832, 24.43362832, 17.53097345, 12.04424779,  8.04424779,
+        5.10619469,  3.12389381,  1.84955752,  1.17699115,  0.92920354, 1.])
+fit_str = np.polyfit(ys,data_str,3)
+j_str = np.polyval(fit_str,yv)
+r_str = (2*j_str/np.pi)**(1/4)
+r_str = np.hstack((np.flip(r_str)[:-1],r_str))
 
 ##############################################################################
 #                              CONTROL SURFACES                              #
@@ -163,6 +93,7 @@ ind04 = [0,2*n]
 ind06 = [0,3*n]
 ind08 = [0,4*n]
 ind1 =  [0,5*n]
+ind95 = [0,ind1[1]-1]
 
 # Inboard aileron locations for swept wing
 ind02in = [n,2*n]
@@ -172,44 +103,57 @@ ail02 = {
        'name': 'ail02',
        'yLoc': ind02,
        'cLoc': c,
-       'antisymmetric': True 
+       'antisymmetric': True,
+       'corrector' : True
        }
 ail04 = {
        'name': 'ail04',
        'yLoc': ind04,
        'cLoc': c,
-       'antisymmetric': True 
+       'antisymmetric': True,
+       'corrector' : True
        }
 ail06 = {
        'name': 'ail06',
        'yLoc': ind06,
        'cLoc': c,
-       'antisymmetric': True 
+       'antisymmetric': True,
+       'corrector' : True
        }
 ail08 = {
        'name': 'ail08',
        'yLoc': ind08,
        'cLoc': c,
-       'antisymmetric': True 
+       'antisymmetric': True,
+       'corrector' : False
        }
 ail1 = {
        'name': 'ail1',
        'yLoc': ind1,
        'cLoc': c,
-       'antisymmetric': True 
+       'antisymmetric': True,
+       'corrector' : False
        }
-
+ail95 = {
+       'name': 'ail95',
+       'yLoc': ind95,
+       'cLoc': c,
+       'antisymmetric': True,
+       'corrector' : False
+       }
 ail02in = {
        'name': 'ail02in',
        'yLoc': ind02in,
        'cLoc': c,
-       'antisymmetric': True 
+       'antisymmetric': True,
+       'corrector' : True
        }
 ail04in = {
        'name': 'ail04in',
        'yLoc': ind04in,
        'cLoc': c,
-       'antisymmetric': True 
+       'antisymmetric': True,
+       'corrector' : True
        }
 
 
@@ -225,12 +169,11 @@ straight_wing = {
             'S_ref_type' : 'projected', # how we compute the wing area,
                                      # can be 'wetted' or 'projected'
                                      
-            'fem_model_type' : 'tube',
-            #'tube_Xsec' : 'rect',       # rectangular Xsec instead of usual tube
-            'thickness_cp' : np.array([0.18*0.0254,0.24*0.0254,0.18*0.0254]),
-            'radius_cp' : np.array([0.18*0.0254,0.24*0.0254,0.18*0.0254]),
+            'fem_model_type' : 'tube',# b2 .25b2 .5b2  .75b2
+            'thickness_cp' : r_str*0.155*0.0254,
+            'radius_cp' : r_str*0.155*0.0254,
             'twist' : np.array([0.]),
-            'sweep' : np.array([0.]),
+            'sweep' : 0,
             'mesh' : mesh,
             'taper' : taper,
             
@@ -253,8 +196,8 @@ straight_wing = {
             'with_wave' : False,     # if true, compute wave drag
 
             # Structural values are based on beryllium copper
-            'E' : 24.5e9,            # [Pa] Young's modulus of the spar
-            'G' : 5.5e9,            # [Pa] shear modulus of the spar
+            'E' : 8.7e9,            # [Pa] Young's modulus of the spar
+            'G' : 2.82e9,            # [Pa] shear modulus of the spar
             'yield' : 1280.e6 / 2.5, # [Pa] yield stress divided by 2.5 for limiting case
             'mrho' : 8.25e3,          # [kg/m^3] material density
             
@@ -275,8 +218,8 @@ swept_wing = {
                                      # can be 'wetted' or 'projected'
                                      
             'fem_model_type' : 'tube',
-            'thickness_cp' : spar_thickness_swept,
-            'radius_cp' : spar_radius_swept,
+            'thickness_cp' : r_swp*0.146*0.0254,
+            'radius_cp' : r_swp*0.146*0.0254,
             'twist' : np.array([0.]),
             'sweep' :  sweep,
             'mesh' : mesh,
@@ -301,8 +244,8 @@ swept_wing = {
             'with_wave' : False,     # if true, compute wave drag
 
             # Structural values are based on beryllium copper
-            'E' : 24.5e9,            # [Pa] Young's modulus of the spar
-            'G' : G,            # [Pa] shear modulus of the spar
+            'E' : 25.7e9,            # [Pa] Young's modulus of the spar
+            'G' : 4.12e9,            # [Pa] shear modulus of the spar
             'yield' : 1280.e6 / 2.5, # [Pa] yield stress divided by 2.5 for limiting case
             'mrho' : 8.25e3,          # [kg/m^3] material density
             
@@ -320,14 +263,18 @@ ailList_swept = [ail02,ail04,ail06,ail08,ail1,ail02in,ail04in]
 
 counter = 0
 for surface in surfList:
-    if surface == straight_wing:
+    surface = straight_wing
+    if surface['sweep'] == 0:
+        surfname = 'str'
         ailList = ailList_straight
     else:
+        surfname = 'swp'
         ailList = ailList_swept
     
     for aileron in ailList:
+        aileron = ail08
         surface['control_surfaces'] = [aileron]
-        
+        print(surfname+' '+aileron['name']+'\n')
         cl = np.ones((len(vels),len(dels)))
         CL = np.ones((len(vels),len(dels)))
         CD = np.ones((len(vels),len(dels)))
@@ -399,7 +346,7 @@ for surface in surfList:
         # Set up the problem
         prob.setup(check=True)
         
-        prob.model.AS_point_0.coupled.nonlinear_solver.options['maxiter'] = 750
+        prob.model.AS_point_0.coupled.nonlinear_solver.options['maxiter'] = 1000
         prob.model.AS_point_0.coupled.nonlinear_solver.options['err_on_maxiter'] = False
         prob.model.AS_point_0.coupled.nonlinear_solver.options['atol'] = 5e-7
         ###################################################################
@@ -433,19 +380,25 @@ for surface in surfList:
                 meshForce[i,j,:,:,:] = prob['AS_point_0.coupled.aero_states.wing_mesh_point_forces']
                 panelForce[i,j,:,:,:] = prob['AS_point_0.total_perf.wing_sec_forces']
                 #pdb.set_trace()
-            
+        
         cl_del = np.zeros(len(vels))
         for i in range(len(vels)):
             cl_del[i] = np.polyfit(dels,cl[i,:],1)[0]
-            
-        np.save('case_'+str(counter)+'cl_del',cl_del)
-        np.save('case_'+str(counter)+'cl',cl)
-        np.save('case_'+str(counter)+'CL',CL)
-        np.save('case_'+str(counter)+'CM',CM)
-        np.save('case_'+str(counter)+'defmesh',defmeshes)
+        
+        import matplotlib.pyplot as plt
+        plt.plot(qvec/47.8803,-cl_del,marker='x')
+        plt.ylim([0,0.01])
+        
+        np.save(surfname+'_'+aileron['name']+'_cl_del',cl_del)
+        np.save(surfname+'_'+aileron['name']+'_cl',cl)
+        np.save(surfname+'_'+aileron['name']+'_CL',CL)
+        np.save(surfname+'_'+aileron['name']+'_CM',CM)
+        np.save(surfname+'_'+aileron['name']+'_defmesh',defmeshes)
         counter+=1
         pdb.set_trace()
-                
+end = time.time()
+elapsed = end-start
 print()
 print('Completed!')
+print('Only took us '+str(elapsed)+' seconds....')
 print()

@@ -103,7 +103,8 @@ aileron1 = {
        'name': 'aileron1',
        'yLoc': [yLoc1[0],yLoc1[1]],       # Start and end chordwise mesh points for the surface
        'cLoc': [0.85,0.85],  # Local chord percentage of the hinge location
-       'antisymmetric': True # Creates CS mirrored across XZ with opposite/equal deflections
+       'antisymmetric': True, # Creates CS mirrored across XZ with opposite/equal deflections
+       'corrector' : True 
        }
 
 # For lower aileron2 errors, do num_y=23,span cos spacing = 1, error ~2%
