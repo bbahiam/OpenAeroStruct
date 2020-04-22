@@ -261,9 +261,12 @@ surfList = [straight_wing,swept_wing]
 ailList_straight = [ail02,ail04,ail06,ail08,ail1]
 ailList_swept = [ail02,ail04,ail06,ail08,ail1,ail02in,ail04in]
 
+surfList = [straight_wing]
+ailList_straight = [ail02]
+ailList_swept = [ail02]
+
 counter = 0
 for surface in surfList:
-    surface = straight_wing
     if surface['sweep'] == 0:
         surfname = 'str'
         ailList = ailList_straight
@@ -272,7 +275,6 @@ for surface in surfList:
         ailList = ailList_swept
     
     for aileron in ailList:
-        aileron = ail08
         surface['control_surfaces'] = [aileron]
         print(surfname+' '+aileron['name']+'\n')
         cl = np.ones((len(vels),len(dels)))

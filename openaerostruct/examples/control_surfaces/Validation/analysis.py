@@ -114,6 +114,102 @@ plt.savefig('reversal_swp.png',dpi=300)
 plt.show()
 
 import pdb
+
+###############################################################################
+#                       dcl_dda vs. q straight wing errs                      #
+###############################################################################
+
+data02 = np.array([[9.807,0.0018592],[19.825,0.0015529],[24.87,0.0013926],\
+                   [29.776,0.0012038],[34.978,0.000894]])
+data04 = np.array([[9.784,0.0042741],
+                    [19.961,0.0037898],
+                    [24.741,0.0034442],
+                    [29.818,0.0029634],
+                    [34.823,0.0024825],
+                    [39.844,0.0018449]])
+data06 = np.array([[9.698,0.0066106],
+                    [14.834,0.006251],
+                    [19.907,0.0057987]])
+data08 = np.array([[9.86,0.0078574],
+                   [14.864,0.0073979]])
+data95 = np.array([[9.797,0.0085128],
+                   [14.808,0.0079749]])
+
+surfname = 'str'
+ails =  ['ail02','ail04','ail06','ail08','ail95']
+markers=['o','^','s','d','v','P']
+colors = ['k','r','b','g','m','c']
+dataList = [data02[:,1],data04[:,1],data06[:,1],data08[:,1],data95[:,1]]
+inds = [[1,3,4,5,6],[1,3,4,5,6,7],[1,2,3],[1,2],[1,2]]
+        
+plt.figure(1,figsize=(6,3),dpi=300)
+
+for i,ail in enumerate(ails):
+    cl = np.load(surfname+'_'+ail+'_cl.npy')
+    cl_del = np.load(surfname+'_'+ail+'_cl_del.npy')
+    errs = 100 * ((-cl_del[inds[i]] - dataList[i])/dataList[i])
+    plt.plot(q_eng[inds[i]],errs,color=colors[i],linestyle='-')#,marker=markers[i])
+    
+    
+#plt.ylim([0,0.01])
+plt.grid()
+plt.xlabel('q (psf)')
+plt.ylabel(r'Error in $c_l/\delta_{ail}$ (%)')
+plt.savefig('errs_str.png',dpi=300)
+plt.show()
+
+###############################################################################
+#                        dcl_dda vs. q swept wing errs                       #
+###############################################################################
+data02 = np.array([[9.84	,0.0005353],
+                    [19.899,0.0003198],
+                    [25.027,0.000173],
+                    [29.892,0.0001305],
+                    [34.822,7.50E-05],
+                    [39.883,1.95E-05],
+                    [44.878,-3.60E-05]])
+data04 = np.array([[20.004,0.0010642],
+                    [25.006,0.0008063],
+                    [29.877,0.000581],
+                    [34.94,0.0004537],
+                    [39.938,0.0003264]])
+data06 = np.array([[19.975,0.0019586],
+                    [24.785,0.0016157],
+                    [29.983,0.0013123],
+                    [34.918,0.0011262]])
+    
+data08 = np.array([[19.942,0.0029771],
+                    [25.015,0.002543],
+                    [29.889,0.0022328],
+                    [34.957,0.0019162]])
+data95 = np.array([[24.87,0.003013],
+                    [29.808,0.0027159],
+                    [34.877,0.0023993]])
+
+surfname = 'swp'
+ails =  ['ail02','ail04','ail06','ail08','ail95']
+markers=['o','^','s','d','v','x']
+colors = ['k','r','b','g','m','c']
+dataList = [data02[:,1],data04[:,1],data06[:,1],data08[:,1],data95[:,1]]
+inds = [[1,3,4,5,6,7,8],[3,4,5,6,7],[3,4,5,6],[3,4,5,6],[4,5,6]]
+        
+plt.figure(1,figsize=(6,3),dpi=1200)
+
+for i,ail in enumerate(ails):
+    cl = np.load(surfname+'_'+ail+'_cl.npy')
+    cl_del = np.load(surfname+'_'+ail+'_cl_del.npy')
+    errs = 100 * ((-cl_del[inds[i]] - dataList[i])/dataList[i])
+    plt.plot(q_eng[inds[i]],errs,color=colors[i],linestyle='-')#,marker=markers[i])
+    
+    
+#plt.ylim([0,0.01])
+plt.grid()
+plt.xlabel('q (psf)')
+plt.ylabel(r'Error in $c_l/\delta_{ail}$ (%)')
+plt.savefig('errs_swp.png',dpi=1200)
+plt.show()
+
+pdb.set_trace()
 ###############################################################################
 #                          Deformed Straight Meshes                           #
 ###############################################################################

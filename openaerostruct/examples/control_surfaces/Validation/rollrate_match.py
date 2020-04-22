@@ -49,7 +49,7 @@ cg_loc = np.array([0.38*rc,0,0])
 
 # Testing conditions
 dels = np.array([-10.,-5.,0.,5.,10.])
-qvec = np.array([0.1,10,15,20,25,30,35,40,45,50,55]) * 47.8803 # maybe ad 0.07 = q too
+qvec = np.array([0.1,10,20,30,40,45,50,55]) * 47.8803 # maybe ad 0.07 = q too
 alpha = 0.012 # From Kirsten Wind Tunnel page
 rho = 1.2
 vels = np.sqrt(2*qvec/rho)
@@ -266,8 +266,8 @@ swept_wing = {
             }
 
 surfList = [straight_wing,swept_wing]
-ailList_straight = [ail02,ail04,ail06,ail08,ail1]
-ailList_swept = [ail02]
+ailList_straight = [ail02,ail04,ail06,]
+ailList_swept = [ail02,ail04,ail06]
 
 class momentBalance(ExplicitComponent):
     def initialize(self):
@@ -290,7 +290,6 @@ class momentBalance(ExplicitComponent):
         
 counter = 0
 for surface in surfList:
-    surface = straight_wing
     if surface['sweep'] == 0:
         surfname = 'str'
         ailList = ailList_straight
@@ -299,9 +298,8 @@ for surface in surfList:
         ailList = ailList_swept
     
     for aileron in ailList:
-        aileron = ail08
         surface['control_surfaces'] = [aileron]
-        print(surfname+' '+aileron['name']+'\n')
+        print(surfname+'_'+aileron['name']+'\n')
         # Create the problem and assign the model group
         prob = Problem()
         
@@ -319,7 +317,7 @@ for surface in surfList:
         indep_var_comp.add_output('load_factor', val=1.)
         indep_var_comp.add_output('cg', val=cg_loc, units='m')
         indep_var_comp.add_output('delta_aileron', val=12.5,units='deg')
-        indep_var_comp.add_output('omega', val=np.array([0.4,0.,0.]),units='rad/s')
+        indep_var_comp.add_output('omega', val=np.array([1.,0.,0.]),units='rad/s')
         
         prob.model.add_subsystem('prob_vars',
              indep_var_comp,
@@ -372,7 +370,7 @@ for surface in surfList:
         
         from openmdao.api import ScipyOptimizeDriver
         prob.driver = ScipyOptimizeDriver()
-        prob.driver.options['tol'] = 1e-9
+        prob.driver.options['tol'] = 1e-7
         
         prob.model.add_design_var('omega', lower=np.array([-5.,0.,0.]), upper=np.array([5.,0.,0.]))
         prob.model.add_objective('residual')
@@ -380,7 +378,10 @@ for surface in surfList:
         # Set up the problem
         prob.setup(check=True)
         
-        prob.model.AS_point_0.coupled.nonlinear_solver.options['maxiter'] = 250
+        prob.model.AS_point_0.coupled.nonlinear_solver.options['maxiter'] = 1000
+        prob.model.AS_point_0.coupled.nonlinear_solver.options['err_on_maxiter'] = False
+        prob.model.AS_point_0.coupled.nonlinear_solver.options['atol'] = 5e-7
+        
         # View model
         #n2(prob)
 
@@ -391,33 +392,24 @@ for surface in surfList:
         p = np.zeros((len(dels),len(vels))) # Angular velocity, rad/s
         
         # Collect deformed meshes from each case
-        mesh_array = np.ones((len(dels),len(vels),np.size(mesh,axis=0),\
-                              np.size(mesh,axis=1),np.size(mesh,axis=2)))
-        def_mesh_array = np.ones((len(dels),len(vels),np.size(mesh,axis=0),\
+        defmeshes = np.ones((len(dels),len(vels),np.size(mesh,axis=0),\
                               np.size(mesh,axis=1),np.size(mesh,axis=2)))
         counter = 1
         total = len(dels)*len(vels)
 
         # Loop through deflections and velocities
-        for i,d in enumerate(dels):
-            for j,v in enumerate(vels):
+        for i,v in enumerate(vels):
+            for j,d in enumerate(dels):
                 print('Case ',counter,' of ',total)
                 
                 prob['delta_aileron'] = d
                 prob['v'] = v
                 prob['Mach_number'] = prob['v']/prob['speed_of_sound']
                 
-                # Recorder (can change so it doesn't overwrite itself)
-                recorder = SqliteRecorder("aerostruct.db")
-                prob.driver.add_recorder(recorder)
-                prob.driver.recording_options['record_derivatives'] = True
-                prob.driver.recording_options['includes'] = ['*']
-                
                 # Run
                 prob.run_driver()
                 
-                mesh_array[i,j,:,:,:] = prob[point_name+'.coupled.'+name+'.mesh']
-                def_mesh_array[i,j,:,:,:] = prob[point_name+'.coupled.'+name+'.def_mesh']
+                defmeshes[i,j,:,:,:] = prob[point_name+'.coupled.'+name+'.def_mesh']
                 p[i,j] = prob['omega'][0]
                 
                 counter += 1
@@ -430,38 +422,13 @@ for surface in surfList:
         pl_U = p*(mesh_dict['span']/2)/vels  # roll rate * semispan / velocity
         
         # Control effectiveness
-        CE = []
+        CE = np.zeros(len(vels))
         # For each velocity tested, CE = slope of linear fit the pl_U = f(d_ail)
         for i in range(len(vels)):
-            CE.append(np.polyfit(dels_rad,pl_U[:,i],1)[0])
+            CE[i] = (np.polyfit(dels_rad,pl_U[i,:],1)[0])
         
         np.save(surfname+'_'+aileron['name']+'_p',p)
         np.save(surfname+'_'+aileron['name']+'_CE',CE)
         np.save(surfname+'_'+aileron['name']+'_defmeshRoll',defmeshes)
         counter+=1
-        pdb.set_trace()
-        print('Full analysis set complete!')
-        
-        
-        
-        
-
-#import matplotlib.pyplot as plt
-##from mpl_toolkits.mplot3d import axes3d
-#
-#plt.figure(1,figsize=(9,4))
-#plt.plot(q,CE,marker='s',color='k',linewidth=2)
-#plt.xlabel('q (Pa)')
-#plt.ylabel('Control Effectiveness')
-##plt.savefig('control_effectiveness.png')
-#plt.show()
-#
-#plt.figure(2,figsize=(9,4))
-#D,Q = np.meshgrid(dels,q)
-#plt.contourf(D,Q,p_deg)
-#cbar = plt.colorbar()
-#cbar.set_label('Roll rate (deg/s)')
-#plt.xlabel('Aileron deflection angle (deg)')
-#plt.ylabel('Dynamic pressure (Pa)')
-##plt.savefig('roll_rate_contour.png')
-#plt.show()
+        print('analysis set complete!')

@@ -126,7 +126,7 @@ def meshPlot(mesh,azim=225,elev=45,deformed=False,name=None,showIt=True,
     Zb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() + 0.5*(Z.max()+Z.min())    
       
     # Plot X forces
-    fig1 = plt.figure(1,figsize=size,dpi=300)
+    fig1 = plt.figure(1,figsize=size,dpi=500)
     ax1 = fig1.gca(projection='3d')
     
     if deformed==True: 
@@ -168,9 +168,19 @@ def meshPlot(mesh,azim=225,elev=45,deformed=False,name=None,showIt=True,
 
     ax1.elev=elev
     ax1.azim=azim
-    plt.grid()
+    
+    #plt.grid()
+    ax1.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax1.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax1.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    
+    ax1.xaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    ax1.yaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    ax1.zaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    
+    plt.axis('off')
     if name is not None:
-        plt.savefig(name+'.png')
+        plt.savefig(name+'.png',dpi=900)
         
     if showIt:
         plt.show()
@@ -208,7 +218,7 @@ def twistPlot(mesh,azim=225,elev=45,name=None,showIt=True,minmax=[-3,3],\
     # fourth dimention - colormap
     # create colormap according to x-value (can use any 50x50 array)
 #    
-    
+
     norm = matplotlib.colors.Normalize(minmax[0],minmax[1])
     m = cm.ScalarMappable(norm=norm, cmap='coolwarm')
     m.set_array([])
@@ -217,7 +227,7 @@ def twistPlot(mesh,azim=225,elev=45,name=None,showIt=True,minmax=[-3,3],\
     surf = ax1.plot_surface(X, Y, Z, facecolors=fcolors,
          linewidth=0, antialiased=False, shade=False)
     
-    cbar = plt.colorbar(m,orientation='horizontal')
+    cbar = plt.colorbar(m)#,orientation='horizontal')
     cbar.set_label('Twist (deg)')
     
     if axisEqual:
@@ -244,9 +254,17 @@ def twistPlot(mesh,azim=225,elev=45,name=None,showIt=True,minmax=[-3,3],\
         
     ax1.elev=elev
     ax1.azim=azim
-    plt.grid()
+    
+    ax1.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax1.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax1.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    
+    ax1.xaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    ax1.yaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    ax1.zaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    #plt.grid()
     if name is not None:
-        plt.savefig(name+'.png')
+        plt.savefig(name+'.png',dpi=1200)
         
     if showIt:
         plt.show()
