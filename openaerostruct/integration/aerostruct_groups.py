@@ -6,6 +6,7 @@ from openaerostruct.structures.spatial_beam_states import SpatialBeamStates
 from openaerostruct.aerodynamics.functionals import VLMFunctionals
 from openaerostruct.structures.spatial_beam_functionals import SpatialBeamFunctionals
 from openaerostruct.functionals.total_performance import TotalPerformance
+from openaerostruct.functionals.total_roll_performance import TotalRollPerformance
 from openaerostruct.transfer.load_transfer import LoadTransfer
 from openaerostruct.aerodynamics.states import VLMStates
 from openaerostruct.aerodynamics.compressible_states import CompressibleVLMStates
@@ -169,11 +170,14 @@ class AerostructPoint(Group):
                              'flows. Defaults to False.')
         self.options.declare('rotational', False, types=bool,
                              desc="Set to True to turn on support for computing angular velocities")
-
+        self.options.declare('rollOnly', False, types=bool,
+                             desc="Set to True to only calculate moment from total_perf")
+        
     def setup(self):
         surfaces = self.options['surfaces']
         rotational = self.options['rotational']
-
+        rollOnly = self.options['rollOnly']
+        
         coupled = Group()
 
         for surface in surfaces:
@@ -322,10 +326,19 @@ class AerostructPoint(Group):
             # In rotational case cannot take in empty_cg and calculate cg.
             # Leads to a cycle between three groups (rotational aero needs 
             # cg well before cg calculation)
-            self.add_subsystem('total_perf',
-                     TotalPerformance(surfaces=surfaces,
-                     user_specified_Sref=self.options['user_specified_Sref'],
-                     internally_connect_fuelburn=self.options['internally_connect_fuelburn'],
-                     rotational=self.options['rotational']),
-                     promotes_inputs=['v', 'rho', 'cg', 'CT', 'speed_of_sound', 'R', 'Mach_number', 'W0', 'load_factor', 'S_ref_total'],
-                     promotes_outputs=['L_equals_W', 'fuelburn', 'CL', 'CD', 'CM'])
+            if rollOnly:
+                self.add_subsystem('total_perf',
+                          TotalRollPerformance(surfaces=surfaces,
+                         user_specified_Sref=self.options['user_specified_Sref'],
+                         internally_connect_fuelburn=self.options['internally_connect_fuelburn'],
+                         rotational=self.options['rotational']),
+                         promotes_inputs=['v', 'rho', 'cg', 'S_ref_total'],
+                         promotes_outputs=['CL', 'CD', 'CM'])
+            else:
+                self.add_subsystem('total_perf',
+                         TotalPerformance(surfaces=surfaces,
+                         user_specified_Sref=self.options['user_specified_Sref'],
+                         internally_connect_fuelburn=self.options['internally_connect_fuelburn'],
+                         rotational=self.options['rotational']),
+                         promotes_inputs=['v', 'rho', 'cg', 'CT', 'speed_of_sound', 'R', 'Mach_number', 'W0', 'load_factor', 'S_ref_total'],
+                         promotes_outputs=['L_equals_W', 'fuelburn', 'CL', 'CD', 'CM'])

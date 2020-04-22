@@ -10,7 +10,6 @@ from openmdao.api import IndepVarComp, Problem, Group, SqliteRecorder, NewtonSol
                             
 from openaerostruct.utils.constants import grav_constant
 
-#from plotting import surfForcePlot, meshPlot
 
 import pdb
 import time
@@ -195,7 +194,6 @@ straight_wing = {
             'with_viscous' : True,
             'with_wave' : False,     # if true, compute wave drag
 
-            # Structural values are based on beryllium copper
             'E' : 8.7e9,            # [Pa] Young's modulus of the spar
             'G' : 2.82e9,            # [Pa] shear modulus of the spar
             'yield' : 1280.e6 / 2.5, # [Pa] yield stress divided by 2.5 for limiting case
@@ -243,7 +241,6 @@ swept_wing = {
             'with_viscous' : True,
             'with_wave' : False,     # if true, compute wave drag
 
-            # Structural values are based on beryllium copper
             'E' : 25.7e9,            # [Pa] Young's modulus of the spar
             'G' : 4.12e9,            # [Pa] shear modulus of the spar
             'yield' : 1280.e6 / 2.5, # [Pa] yield stress divided by 2.5 for limiting case
@@ -294,14 +291,8 @@ for surface in surfList:
         indep_var_comp = IndepVarComp()
         indep_var_comp.add_output('v', val=25., units='m/s')
         indep_var_comp.add_output('alpha', val=alpha, units='deg')
-        indep_var_comp.add_output('Mach_number', val=25./340.5)
         indep_var_comp.add_output('re', val=5e5, units='1/m')
         indep_var_comp.add_output('rho', val=rho, units='kg/m**3')
-        indep_var_comp.add_output('CT', val=grav_constant * 17.e-6, units='1/s')
-        indep_var_comp.add_output('R', val=0., units='m')
-        indep_var_comp.add_output('W0', val=5.,  units='kg')
-        indep_var_comp.add_output('speed_of_sound', val=340.5, units='m/s')
-        indep_var_comp.add_output('load_factor', val=1.)
         indep_var_comp.add_output('cg', val=cg_loc, units='m')
         indep_var_comp.add_output('delta_aileron', val=12.5,units='deg')
         indep_var_comp.add_output('omega', val=np.array([0.,0.,0.]),units='rad/s')
@@ -320,11 +311,10 @@ for surface in surfList:
         point_name = 'AS_point_0'
                 
         # Create the aero point group and add it to the model
-        AS_point = AerostructPoint(surfaces=[surface],rotational=True,compressible=False)
+        AS_point = AerostructPoint(surfaces=[surface],rotational=True,rollOnly=True)
         
         prob.model.add_subsystem(point_name, AS_point,
-                promotes_inputs=['v', 'alpha', 'Mach_number', 're', 'rho', 'CT', 'R',
-                    'W0', 'speed_of_sound', 'cg', 'load_factor', 'delta_aileron','omega'])
+                promotes_inputs=['v', 'alpha', 'Mach_number', 're', 'rho', 'cg', 'delta_aileron','omega'])
                 
         com_name = point_name + '.' + name + '_perf'
     
@@ -338,16 +328,15 @@ for surface in surfList:
         prob.model.connect(name + '.radius', com_name + '.radius')
         prob.model.connect(name + '.thickness', com_name + '.thickness')
         prob.model.connect(name + '.nodes', com_name + '.nodes')
-        prob.model.connect(name + '.structural_mass', point_name + '.' + 'total_perf.' + name + '_structural_mass')
         prob.model.connect(name + '.t_over_c', com_name + '.t_over_c')
         
-        from openmdao.api import ScipyOptimizeDriver
-        prob.driver = ScipyOptimizeDriver()
-        prob.driver.options['tol'] = 1e-9
+        ##from openmdao.api import ScipyOptimizeDriver
+        #prob.driver = ScipyOptimizeDriver()
+        #prob.driver.options['tol'] = 1e-9
             
         # Set up the problem
         prob.setup(check=True)
-        
+        pdb.set_trace()
         prob.model.AS_point_0.coupled.nonlinear_solver.options['maxiter'] = 1000
         prob.model.AS_point_0.coupled.nonlinear_solver.options['err_on_maxiter'] = False
         prob.model.AS_point_0.coupled.nonlinear_solver.options['atol'] = 5e-7
@@ -358,10 +347,8 @@ for surface in surfList:
         for i,v in enumerate(vels):
             for j,d in enumerate(dels):
                 prob['v'] = v
-                prob['Mach_number'] = v/340.5
                 prob['delta_aileron'] = d
                 prob['re'] = (rho*6.5*0.0254*v)/(1.4207e-5)
-                prob['load_factor'] = 1.
                 
                 print('v='+str(v))
                 print('d='+str(d))

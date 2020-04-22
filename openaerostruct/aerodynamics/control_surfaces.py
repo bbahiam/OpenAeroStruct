@@ -5,6 +5,13 @@ from scipy.spatial.transform import Rotation as R
 from openmdao.api import ExplicitComponent
 
 class ControlSurface(ExplicitComponent):
+    
+    
+    
+    #### TODO
+    # - Support arbitrary asymmetric (not antisymmetric) surfaces
+    # - Clean up derivative computation to save computation time
+    
     """
     Changes the panel surface normal vectors to account for control
     surface rotation.

@@ -12,10 +12,14 @@ from openaerostruct.utils.constants import grav_constant
 import time
 import pdb
 
+
+####### TODO
+# - double check connections on Newton driver to figure out why it's so slow
+
 """
     What this example does:
     -Takes a control surface deflection angle and gives the corresponding
-     steady-state roll rate.
+     steady-state roll rate
     -Find roll rate for multiple deflections at multiple velocities
     -Calculate the control effectiveness at each velocity
     
@@ -203,7 +207,6 @@ straight_wing = {
             'with_viscous' : True,
             'with_wave' : False,     # if true, compute wave drag
 
-            # Structural values are based on beryllium copper
             'E' : 8.7e9,            # [Pa] Young's modulus of the spar
             'G' : 2.82e9,            # [Pa] shear modulus of the spar
             'yield' : 1280.e6 / 2.5, # [Pa] yield stress divided by 2.5 for limiting case
@@ -251,7 +254,6 @@ swept_wing = {
             'with_viscous' : True,
             'with_wave' : False,     # if true, compute wave drag
 
-            # Structural values are based on beryllium copper
             'E' : 25.7e9,            # [Pa] Young's modulus of the spar
             'G' : 4.12e9,            # [Pa] shear modulus of the spar
             'yield' : 1280.e6 / 2.5, # [Pa] yield stress divided by 2.5 for limiting case
@@ -307,14 +309,8 @@ for surface in surfList:
         indep_var_comp = IndepVarComp()
         indep_var_comp.add_output('v', val=25., units='m/s')
         indep_var_comp.add_output('alpha', val=alpha, units='deg')
-        indep_var_comp.add_output('Mach_number', val=25./340.5)
         indep_var_comp.add_output('re', val=5e5, units='1/m')
         indep_var_comp.add_output('rho', val=rho, units='kg/m**3')
-        indep_var_comp.add_output('CT', val=grav_constant * 17.e-6, units='1/s')
-        indep_var_comp.add_output('R', val=0., units='m')
-        indep_var_comp.add_output('W0', val=5.,  units='kg')
-        indep_var_comp.add_output('speed_of_sound', val=340.5, units='m/s')
-        indep_var_comp.add_output('load_factor', val=1.)
         indep_var_comp.add_output('cg', val=cg_loc, units='m')
         indep_var_comp.add_output('delta_aileron', val=12.5,units='deg')
         indep_var_comp.add_output('omega', val=np.array([1.,0.,0.]),units='rad/s')
@@ -333,11 +329,10 @@ for surface in surfList:
         point_name = 'AS_point_0'
         
         # Create the aero point group and add it to the model
-        AS_point = AerostructPoint(surfaces=[surface],compressible=False,rotational=True)
+        AS_point = AerostructPoint(surfaces=[surface],rollOnly=True,rotational=True)
         
         prob.model.add_subsystem(point_name, AS_point,
-            promotes_inputs=['v', 'alpha', 'Mach_number', 're', 'rho', 'CT', 'R',
-                'W0', 'speed_of_sound', 'cg', 'load_factor','delta_aileron','omega'])
+            promotes_inputs=['v', 'alpha', 're', 'rho', 'cg', 'delta_aileron', 'omega'])
         
         com_name = point_name + '.' + name + '_perf'
         prob.model.connect(name + '.local_stiff_transformed', point_name + '.coupled.' + name + '.local_stiff_transformed')
@@ -350,8 +345,6 @@ for surface in surfList:
         prob.model.connect(name + '.radius', com_name + '.radius')
         prob.model.connect(name + '.thickness', com_name + '.thickness')
         prob.model.connect(name + '.nodes', com_name + '.nodes')
-        #prob.model.connect(name + '.cg_location', point_name + '.' + 'total_perf.' + name + '_cg_location')
-        prob.model.connect(name + '.structural_mass', point_name + '.' + 'total_perf.' + name + '_structural_mass')
         prob.model.connect(name + '.t_over_c', com_name + '.t_over_c')
         
 
@@ -401,10 +394,8 @@ for surface in surfList:
         for i,v in enumerate(vels):
             for j,d in enumerate(dels):
                 print('Case ',counter,' of ',total)
-                
                 prob['delta_aileron'] = d
                 prob['v'] = v
-                prob['Mach_number'] = prob['v']/prob['speed_of_sound']
                 
                 # Run
                 prob.run_driver()

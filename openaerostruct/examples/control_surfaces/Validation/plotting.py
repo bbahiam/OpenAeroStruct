@@ -189,7 +189,7 @@ def meshPlot(mesh,azim=225,elev=45,deformed=False,name=None,showIt=True,
 
 def twistPlot(mesh,azim=225,elev=45,name=None,showIt=True,minmax=[-3,3],\
              bounds=[[-0.61,0.61],[-0.61,0.61],[-0.15,0.15]],axisEqual=False,\
-             size=(12,6),titleStr=None):    
+             size=(12,6),titleStr=None,noAxes=False):    
     X = mesh[:,:,0];
     Y = mesh[:,:,1];
     Z = mesh[:,:,2];
@@ -213,18 +213,14 @@ def twistPlot(mesh,azim=225,elev=45,name=None,showIt=True,minmax=[-3,3],\
                            /(np.linalg.norm(mesh_vec[j,:]))) * 180./np.pi)
     
     angs = np.reshape(ang_vec,(1,len(ang_vec))) * np.ones(np.shape(mesh[:,:,0]))
-        
     
-    # fourth dimention - colormap
-    # create colormap according to x-value (can use any 50x50 array)
-#    
 
     norm = matplotlib.colors.Normalize(minmax[0],minmax[1])
     m = cm.ScalarMappable(norm=norm, cmap='coolwarm')
     m.set_array([])
     fcolors = m.to_rgba(angs)
     
-    surf = ax1.plot_surface(X, Y, Z, facecolors=fcolors,
+    ax1.plot_surface(X, Y, Z, facecolors=fcolors,
          linewidth=0, antialiased=False, shade=False)
     
     cbar = plt.colorbar(m)#,orientation='horizontal')
@@ -255,14 +251,16 @@ def twistPlot(mesh,azim=225,elev=45,name=None,showIt=True,minmax=[-3,3],\
     ax1.elev=elev
     ax1.azim=azim
     
-    ax1.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
-    ax1.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
-    ax1.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
-    
-    ax1.xaxis._axinfo["grid"]['color'] =  (1,1,1,0)
-    ax1.yaxis._axinfo["grid"]['color'] =  (1,1,1,0)
-    ax1.zaxis._axinfo["grid"]['color'] =  (1,1,1,0)
-    #plt.grid()
+    if noAxes:
+        ax1.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        ax1.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        ax1.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        
+        ax1.xaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+        ax1.yaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+        ax1.zaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    else:
+        plt.grid()
     if name is not None:
         plt.savefig(name+'.png',dpi=1200)
         
