@@ -5,9 +5,6 @@ from scipy.spatial.transform import Rotation as R
 from openmdao.api import ExplicitComponent
 
 class ControlSurface(ExplicitComponent):
-
-
-
     #### TODO
     # - Support arbitrary asymmetric (not antisymmetric) surfaces
     # - Clean up derivative computation to save computation time
@@ -69,51 +66,9 @@ class ControlSurface(ExplicitComponent):
 
         mesh = inputs['def_mesh']
 
-        if 'corrector' in surface['control_surfaces'][0]:
-            if surface['control_surfaces'][0]['corrector']:
-                # Empirical fudge factor for plain flap effectiveness as a
-                # function of the chord percentage and deflection angle
-                x = abs(deflection)
-                y = 1 - np.sum(cLoc)/2
-
-                if x < 25:
-                    p00 =      0.6275
-                    p10 =   -0.009711
-                    p01 =       1.557
-                    p20 =    0.001847
-                    p11 =     0.07229
-                    p02 =      -2.092
-                    p30 =  -0.0002002
-                    p21 =   -0.002684
-                    p12 =     -0.1701
-                    p40 =   8.013e-06
-                    p31 =  -0.0003361
-                    p22 =     0.01196
-                    p50 =  -1.098e-07
-                    p41 =   9.761e-06
-                    p32 =  -5.638e-05
-
-                    nu = p00 + p10*x + p01*y + p20*x**2 + p11*x*y + p02*y**2 + p30*x**3 + \
-                             p21*x**2*y + p12*x*y**2 + p40*x**4 + p31*x**3*y + p22*x**2*y**2 \
-                            + p50*x**5 + p41*x**4*y + p32*x**3*y**2
-                else:
-                    p00 =       1.668
-                    p10 =    -0.09698
-                    p01 =      -1.174
-                    p20 =    0.002653
-                    p11 =      0.1169
-                    p02 =       1.582
-                    p30 =  -3.266e-05
-                    p21 =   -0.002302
-                    p12 =     -0.1282
-                    p40 =   1.546e-07
-                    p31 =   1.141e-05
-                    p22 =    0.001739
-
-                    nu = p00 + p10*x + p01*y + p20*x**2 + p11*x*y + p02*y**2 + p30*x**3 + \
-                             p21*x**2*y + p12*x*y**2 + p40*x**4 + p31*x**3*y + p22*x**2*y**2
-
-                deflection *= nu
+        if ('corrector' in surface['control_surfaces'][0] 
+                and surface['control_surfaces'][0]['corrector']):
+            deflection *= correction_plain_flap(deflection, cLoc)
 
         if deflection != 0:
 ############################### Get hinge lines ###############################
@@ -384,3 +339,73 @@ class ControlSurface(ExplicitComponent):
         else:
             partials['deflected_normals','undeflected_normals'] = np.zeros_like(partials['deflected_normals','undeflected_normals'])
             partials['deflected_normals','delta_aileron']  = np.zeros_like(partials['deflected_normals','delta_aileron'])
+
+
+def correction_plain_flap(deflection, cLoc):
+    # Empirical fudge factor for plain flap effectiveness as a
+    # function of the chord percentage and deflection angle
+    x = abs(deflection)
+    y = 1 - np.sum(cLoc)/2
+
+    if x < 25:
+        p00 = 0.6275
+        p10 = -0.009711
+        p01 = 1.557
+        p20 = 0.001847
+        p11 = 0.07229
+        p02 = -2.092
+        p30 = -0.0002002
+        p21 = -0.002684
+        p12 = -0.1701
+        p40 = 8.013e-06
+        p31 = -0.0003361
+        p22 = 0.01196
+        p50 = -1.098e-07
+        p41 = 9.761e-06
+        p32 = -5.638e-05
+
+        nu = (  p00
+              + p10*x
+              + p01*y
+              + p20*x**2
+              + p11*x*y
+              + p02*y**2
+              + p30*x**3
+              + p21*x**2*y
+              + p12*x*y**2
+              + p40*x**4
+              + p31*x**3*y
+              + p22*x**2*y**2
+              + p50*x**5
+              + p41*x**4*y
+              + p32*x**3*y**2
+              )
+    else:
+        p00 = 1.668
+        p10 = -0.09698
+        p01 = -1.174
+        p20 = 0.002653
+        p11 = 0.1169
+        p02 = 1.582
+        p30 = -3.266e-05
+        p21 = -0.002302
+        p12 = -0.1282
+        p40 = 1.546e-07
+        p31 = 1.141e-05
+        p22 = 0.001739
+
+        nu = (  p00
+              + p10*x
+              + p01*y
+              + p20*x**2
+              + p11*x*y
+              + p02*y**2
+              + p30*x**3
+              + p21*x**2*y
+              + p12*x*y**2
+              + p40*x**4
+              + p31*x**3*y
+              + p22*x**2*y**2
+              )
+
+    return nu
