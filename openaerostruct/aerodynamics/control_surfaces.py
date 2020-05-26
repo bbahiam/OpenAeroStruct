@@ -80,7 +80,7 @@ class ControlSurface(ExplicitComponent):
 
 
 ###################### Find affected mesh points ##########################
-        self.cs_mesh = cs_mesh = mesh[:,np.min(yLoc):np.max(yLoc)+1,:]
+        cs_mesh = mesh[:,np.min(yLoc):np.max(yLoc)+1,:]
 
         # X and Y locations of the hingeline
         yHinge = cs_mesh[0,:,1]
