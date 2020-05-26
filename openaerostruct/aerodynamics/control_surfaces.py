@@ -87,7 +87,7 @@ class ControlSurface(ExplicitComponent):
         xHinge = (yHinge - h0[1]) * ((h1[0]-h0[0])/(h1[1]-h0[1])) + h0[0]
 
         # Logical matrix, 1 if point is downstream the hingeline
-        self.xes = xes = cs_mesh[:,:,0]-xHinge
+        xes = cs_mesh[:,:,0]-xHinge
         xes[xes<=0] = 0
         xes[xes>0] = 1
         cs_panels = np.zeros((np.size(xes,axis=0)-1,np.size(xes,axis=1)-1))
