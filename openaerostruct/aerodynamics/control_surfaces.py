@@ -59,7 +59,7 @@ class ControlSurface(ExplicitComponent):
     def compute(self, inputs, outputs):
         deflection = inputs['delta_aileron']*np.pi/180
         normals = inputs['undeflected_normals']
-        new_normals = normals * np.ones_like(normals)
+        new_normals = normals.copy()
 
         surface = self.surface
         yLoc = self.yLoc
