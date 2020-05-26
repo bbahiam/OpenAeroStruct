@@ -74,39 +74,10 @@ class ControlSurface(ExplicitComponent):
 
 ############################### Get hinge lines ###############################
         if antisymmetric:
-            y0 = -np.max(yLoc)-1; # The starting y position of the aileron
-            y1 = -np.min(yLoc)-1; # The ending y position of the aileron
+            _, _, mirror_hinge = find_hinge(cLoc, [-y for y in yLoc], mesh)
 
-            mesh0 = mesh[:,y0,:] # The chordwise mesh at the 1st y pos
-            mesh1 = mesh[:,y1,:] # The chordwise mesh at the 2nd y pos
+        h0, h1, hinge = find_hinge(cLoc, yLoc, mesh)
 
-            c0 = np.linalg.norm(mesh0[0,:]-mesh0[-1,:]) # Chord length at 1st y pos
-            c1 = np.linalg.norm(mesh1[0,:]-mesh1[-1,:]) # Chord length at 2nd y pos
-
-            u0 = (mesh0[-1,:]-mesh0[0,:])/c0 # Unit vector from LE to TE for chord1
-            u1 = (mesh1[-1,:]-mesh1[0,:])/c1 # Unit vector from LE to TE for chord2
-
-            h1 = self.h1 = (mesh1[0,:] + cLoc[1]*c1*u1) # second hinge point
-            h0 = self.h0 = (mesh0[0,:] + cLoc[0]*c0*u0) # first hinge point
-            mirror_hinge = h0 - h1 # hinge line
-            mirror_hinge /= np.linalg.norm(mirror_hinge)
-
-        y0 = np.min(yLoc); # The starting y position of the aileron
-        y1 = np.max(yLoc); # The ending y position of the aileron
-
-        mesh0 = mesh[:,y0,:] # The chordwise mesh at the 1st y pos
-        mesh1 = mesh[:,y1,:] # The chordwise mesh at the 2nd y pos
-
-        c0 = np.linalg.norm(mesh0[0,:]-mesh0[-1,:]) # Chord length at 1st y pos
-        c1 = np.linalg.norm(mesh1[0,:]-mesh1[-1,:]) # Chord length at 2nd y pos
-
-        u0 = (mesh0[-1,:]-mesh0[0,:])/c0 # Unit vector from LE to TE for chord1
-        u1 = (mesh1[-1,:]-mesh1[0,:])/c1 # Unit vector from LE to TE for chord2
-
-        h1 = self.h1 = (mesh1[0,:] + cLoc[1]*c1*u1) # second hinge point
-        h0 = self.h0 = (mesh0[0,:] + cLoc[0]*c0*u0) # first hinge point
-        hinge = h1 - h0 # hinge line
-        hinge /= np.linalg.norm(hinge)
 
 ###################### Find affected mesh points ##########################
         self.cs_mesh = cs_mesh = mesh[:,np.min(yLoc):np.max(yLoc)+1,:]
@@ -403,3 +374,23 @@ def correction_plain_flap(deflection, cLoc):
               )
 
     return nu
+
+def find_hinge(cLoc, yLoc, mesh):
+    y0 = np.min(yLoc); # The starting y position of the aileron
+    y1 = np.max(yLoc); # The ending y position of the aileron
+
+    mesh0 = mesh[:,y0,:] # The chordwise mesh at the 1st y pos
+    mesh1 = mesh[:,y1,:] # The chordwise mesh at the 2nd y pos
+
+    c0 = np.linalg.norm(mesh0[0,:]-mesh0[-1,:]) # Chord length at 1st y pos
+    c1 = np.linalg.norm(mesh1[0,:]-mesh1[-1,:]) # Chord length at 2nd y pos
+
+    u0 = (mesh0[-1,:]-mesh0[0,:])/c0 # Unit vector from LE to TE for chord1
+    u1 = (mesh1[-1,:]-mesh1[0,:])/c1 # Unit vector from LE to TE for chord2
+
+    h1 = (mesh1[0,:] + cLoc[1]*c1*u1) # second hinge point
+    h0 = (mesh0[0,:] + cLoc[0]*c0*u0) # first hinge point
+    hinge = h1 - h0 # hinge line
+    hinge /= np.linalg.norm(hinge)
+
+    return h0, h1, hinge
