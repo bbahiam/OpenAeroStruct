@@ -29,12 +29,14 @@ class ControlSurface(ExplicitComponent):
     def initialize(self):
         self.options.declare('surface', types=dict)  # Is this needed?
         self.options.declare('yLoc',types=list) # Index of Ypos start of aileron, 0=outboard, ny=centerline
-        self.options.declare('cLoc',types=list) # Chordwise positions
+        self.options.declare('cLoc',types=list) # Chordwise positions as a fraction of the chord
         self.options.declare('antisymmetric',types=bool) # Antisymmetry (like ailerons)
 
     def setup(self):
         self.surface = surface = self.options['surface']
+        assert len(self.options['yLoc'])==2, "yLoc must contain indexes of begin and end of control surface"
         self.yLoc = self.options['yLoc']
+        assert len(self.options['cLoc'])==2, "cLoc must contain chord fractions of begin and end of control surface"
         self.cLoc = self.options['cLoc']
         self.antisymmetric = self.options['antisymmetric']
 
