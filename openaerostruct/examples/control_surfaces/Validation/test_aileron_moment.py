@@ -7,20 +7,20 @@ from openaerostruct.integration.aerostruct_groups import AerostructGeometry, Aer
 
 from openmdao.api import IndepVarComp, Problem, Group, SqliteRecorder, NewtonSolver,\
                             ExecComp, NonlinearBlockGS, ExplicitComponent, n2
-                            
+
 from openaerostruct.utils.constants import grav_constant
 
 from data_TN2563_fig18_19 import dcl_ddelta_data
 
 """
     Takes a control surface deflection and gives the instantaneous moment.
-    
+
     Overview:
         -Define mesh and control surface
         -Set up aerostructural point group as normal (rotational=False)
         -Run model
         -View moment
-        
+
 """
 ##############################################################################
 #                                  GEOMETRY                                  #
@@ -162,7 +162,7 @@ straight_wing = {
                                     # reflected across the plane y = 0
             'S_ref_type' : 'projected', # how we compute the wing area,
                                      # can be 'wetted' or 'projected'
-                                     
+
             'fem_model_type' : 'tube',# b2 .25b2 .5b2  .75b2
             'thickness_cp' : r_str*0.155*0.0254,
             'radius_cp' : r_str*0.155*0.0254,
@@ -170,7 +170,7 @@ straight_wing = {
             'sweep' : 0,
             'mesh' : mesh,
             'taper' : taper,
-            
+
             # Aerodynamic performance of the lifting surface at
             # an angle of attack of 0 (alpha=0).
             # These CL0 and CD0 values are added to the CL and CD
@@ -193,7 +193,7 @@ straight_wing = {
             'G' : 2.82e9,            # [Pa] shear modulus of the spar
             'yield' : 1280.e6 / 2.5, # [Pa] yield stress divided by 2.5 for limiting case
             'mrho' : 8.25e3,          # [kg/m^3] material density
-            
+
             'fem_origin' : 0.38,    # normalized chordwise location of the spar, 0.38c
             'wing_weight_ratio' : 1.5,
             'struct_weight_relief' : False,    # True to add the weight of the structure to the loads on the structure
@@ -209,7 +209,7 @@ swept_wing = {
                                     # reflected across the plane y = 0
             'S_ref_type' : 'projected', # how we compute the wing area,
                                      # can be 'wetted' or 'projected'
-                                     
+
             'fem_model_type' : 'tube',
             'thickness_cp' : r_swp*0.146*0.0254,
             'radius_cp' : r_swp*0.146*0.0254,
@@ -217,7 +217,7 @@ swept_wing = {
             'sweep' :  sweep,
             'mesh' : mesh,
             'taper' : taper,
-            
+
             # Aerodynamic performance of the lifting surface at
             # an angle of attack of 0 (alpha=0).
             # These CL0 and CD0 values are added to the CL and CD
@@ -240,7 +240,7 @@ swept_wing = {
             'G' : 4.12e9,            # [Pa] shear modulus of the spar
             'yield' : 1280.e6 / 2.5, # [Pa] yield stress divided by 2.5 for limiting case
             'mrho' : 8.25e3,          # [kg/m^3] material density
-            
+
             'fem_origin' : 0.38,    # normalized chordwise location of the spar, 0.38c
             'wing_weight_ratio' : 1.5,
             'struct_weight_relief' : False,    # True to add the weight of the structure to the loads on the structure
@@ -260,7 +260,7 @@ for surface in surfList:
     else:
         surfname = 'swp'
         ailList = ailList_swept
-    
+
     for aileron in ailList:
         surface['control_surfaces'] = [aileron]
         print(surfname+' '+aileron['name']+'\n')
@@ -269,8 +269,8 @@ for surface in surfList:
         ###################################################################
         # Create the problem and assign the model group
         prob = Problem()
-                
-        # Add problem information as an independent variables component                
+
+        # Add problem information as an independent variables component
         indep_var_comp = IndepVarComp()
         indep_var_comp.add_output('v', val=25., units='m/s')
         indep_var_comp.add_output('alpha', val=alpha, units='deg')
