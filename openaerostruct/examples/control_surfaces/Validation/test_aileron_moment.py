@@ -37,8 +37,6 @@ sweep = 46 # from LE
 cg_loc = np.array([0.38*rc,0,0])
 
 # Testing conditions
-dels = np.array([-10.,-5.,0.,5.,10.])
-qvec = np.array([0.1,10,15,20,25,30,35,40,45,50,55]) * 47.8803 # maybe ad 0.07 = q too
 alpha = 0.012 # From Kirsten Wind Tunnel page
 rho = 1.2
 
@@ -114,7 +112,7 @@ ail06 = {
        'yLoc': ind06,
        'cLoc': c,
        'antisymmetric': True,
-       'corrector' : True
+       'corrector' : False
        }
 ail08 = {
        'name': 'ail08',
@@ -252,14 +250,9 @@ swept_wing = {
             }
 
 surfList = [straight_wing,swept_wing]
-ailList_straight = [ail02,ail04,ail06,ail08,ail1]
-ailList_swept = [ail02,ail04,ail06,ail08,ail1,ail02in,ail04in]
+ailList_straight = [ail02,ail04,ail06,ail08,ail95]
+ailList_swept = [ail02,ail04,ail06,ail08,ail95]
 
-surfList = [straight_wing]
-ailList_straight = [ail02]
-ailList_swept = [ail02]
-
-counter = 0
 for surface in surfList:
     if surface['sweep'] == 0:
         surfname = 'str'
@@ -286,85 +279,85 @@ for surface in surfList:
         indep_var_comp.add_output('cg', val=cg_loc, units='m')
         indep_var_comp.add_output('delta_aileron', val=12.5,units='deg')
         indep_var_comp.add_output('omega', val=np.array([0.,0.,0.]),units='rad/s')
-                
+
         prob.model.add_subsystem('prob_vars',
                  indep_var_comp,
                  promotes=['*'])
-                
+
         aerostruct_group = AerostructGeometry(surface=surface)
-        
+
         name = 'wing'
-                
+
         # Add tmp_group to the problem with the name of the surface.
         prob.model.add_subsystem(name, aerostruct_group)
-                
+
         point_name = 'AS_point_0'
-                
+
         # Create the aero point group and add it to the model
         AS_point = AerostructPoint(surfaces=[surface],rotational=True,rollOnly=True)
-        
+
         prob.model.add_subsystem(point_name, AS_point,
                 promotes_inputs=['v', 'alpha', 'Mach_number', 're', 'rho', 'cg', 'delta_aileron','omega'])
-                
+
         com_name = point_name + '.' + name + '_perf'
-    
+
         prob.model.connect(name + '.local_stiff_transformed', point_name + '.coupled.' + name + '.local_stiff_transformed')
         prob.model.connect(name + '.nodes', point_name + '.coupled.' + name + '.nodes')
-                
+
         # Connect aerodyamic mesh to coupled group mesh
         prob.model.connect(name + '.mesh', point_name + '.coupled.' + name + '.mesh')
-                
+
         # Connect performance calculation variables
         prob.model.connect(name + '.radius', com_name + '.radius')
         prob.model.connect(name + '.thickness', com_name + '.thickness')
         prob.model.connect(name + '.nodes', com_name + '.nodes')
         prob.model.connect(name + '.t_over_c', com_name + '.t_over_c')
-        
+
         ##from openmdao.api import ScipyOptimizeDriver
         #prob.driver = ScipyOptimizeDriver()
         #prob.driver.options['tol'] = 1e-9
-            
+
         # Set up the problem
         prob.setup(check=True)
-        prob.model.AS_point_0.coupled.nonlinear_solver.options['maxiter'] = 1000
-        prob.model.AS_point_0.coupled.nonlinear_solver.options['err_on_maxiter'] = False
-        prob.model.AS_point_0.coupled.nonlinear_solver.options['atol'] = 5e-7
-        
+        prob.model.AS_point_0.coupled.nonlinear_solver.options['maxiter'] = 10000
+        prob.model.AS_point_0.coupled.nonlinear_solver.options['atol'] = 1e-6
+        prob.model.AS_point_0.coupled.nonlinear_solver.options['err_on_non_converge'] = True
+
         ###################################################################
         #                            RUN PROBLEM                          #
         ###################################################################
-        
-        q_psf, dcl_ddelta = (dcl_ddelta_data[surfname][aileron['name']]).T #unpack columns of data
-        q_pa = q_psf*47.8803
-        vels = np.sqrt(2*q_pa/rho)
 
-        for v, cl_del_true in zip(vels, dcl_ddelta):
-            cl = np.empty_like(dels)
-            for j,d in enumerate(dels):
-                prob['v'] = v
-                prob['delta_aileron'] = d
-                prob['re'] = (rho*6.5*0.0254*v)/(1.4207e-5)
-                
-                print('v='+str(v))
-                print('d='+str(d))
-                # Run the model
-                prob.run_model()
+        for q_psf, cl_del_true in dcl_ddelta_data[surfname][aileron['name']]: # iterate lines
+            q_pa = q_psf*47.8803
+            v = np.sqrt(2*q_pa/rho)
+            d = 5. #aileron deflection in deg
 
-                # calculate MAC
-                S_ref = prob['AS_point_0.coupled.wing.S_ref']
-                chords = prob['AS_point_0.coupled.wing.chords']
-                widths = prob['AS_point_0.coupled.wing.widths']
-                panel_chords = (chords[1:] + chords[:-1]) * 0.5
-                MAC = 1. / S_ref * np.sum(panel_chords**2 * widths)
-                
-                # get cl instead of CM
-                CM = prob['AS_point_0.total_perf.moment.CM']
-                cl[j] = MAC * CM[0]/b
-        
-            # Get the derivative dcl_ddelta by fitting a line to the cl(delta) data 
+            prob['v'] = v
+            prob['delta_aileron'] = d
+            prob['re'] = (rho*6.5*0.0254*v)/(1.4207e-5)
+
+            print('v='+str(v))
+            print('d='+str(d))
+            # Run the model
+            prob.run_model()
+
+            # calculate MAC
+            S_ref = prob['AS_point_0.coupled.wing.S_ref'][0]
+            chords = prob['AS_point_0.coupled.wing.chords']
+            widths = prob['AS_point_0.coupled.wing.widths']
+            panel_chords = (chords[1:] + chords[:-1]) * 0.5
+            MAC = 1. / S_ref * np.sum(panel_chords**2 * widths)
+
+            # get cl instead of CM
+            CM = prob['AS_point_0.total_perf.moment.CM']
+            cl = MAC * CM[0]/b
+            cl_del = -cl/d # change sign to be consistent with NACA TN
+            print(q_psf, cl)
+
+            # Get the derivative dcl_ddelta by fitting a line to the cl(delta) data
             # obtained above
-            cl_del = -np.polyfit(dels,cl,1)[0] # change sign to be consistent with NACA TN
 
             print('=============================================================')
-            print(cl_del,cl_del_true,abs(cl_del-cl_del_true)) 
-            assert(abs(cl_del-cl_del_true)<2e-4)  # resolution of the report data is ~1e-4
+            print(surfname, aileron['name'], q_psf)
+            print(cl_del,cl_del_true,abs(cl_del-cl_del_true))
+            assert(abs(cl_del-cl_del_true)<6e-4)  # resolution of the report data is ~1e-4
