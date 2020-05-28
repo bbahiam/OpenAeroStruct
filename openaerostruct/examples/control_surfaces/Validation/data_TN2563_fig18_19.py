@@ -1,5 +1,7 @@
 import numpy as np
 
+""" Test data for control surfaces """
+
 dcl_ddelta_data = {
     'str': {  # straight wing
         #  span fraction  q[psf]  dcl_dda
