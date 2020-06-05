@@ -121,10 +121,12 @@ class CoupledAS(Group):
             for ctrl_surf in surface['control_surfaces']: # TODO: only works with one control surface
                 deflected_normals_name = 'normals'
                 self.add_subsystem(ctrl_surf['name'],
-                                   ControlSurface(surface=surface,
+                                   ControlSurface(mesh=surface['mesh'],
                                                   yLoc=ctrl_surf['yLoc'],
                                                   cLoc=ctrl_surf['cLoc'],
-                                                  antisymmetric=ctrl_surf['antisymmetric']),
+                                                  antisymmetric=ctrl_surf['antisymmetric'],
+                                                  semi_empirical_correction=ctrl_surf['corrector'],
+                                                  ),
                                    promotes_inputs=[('undeflected_normals', normals_name),'delta_aileron','def_mesh'],
                                    promotes_outputs=[('deflected_normals', deflected_normals_name)]
                                    )

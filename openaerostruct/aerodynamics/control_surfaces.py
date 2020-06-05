@@ -27,20 +27,20 @@ class ControlSurface(ExplicitComponent):
     """
 
     def initialize(self):
-        self.options.declare('surface', types=dict)  # Is this needed?
         self.options.declare('yLoc',types=list) # Index of Ypos start of aileron, 0=outboard, ny=centerline
         self.options.declare('cLoc',types=list) # Chordwise positions as a fraction of the chord
         self.options.declare('antisymmetric',types=bool) # Antisymmetry (like ailerons)
+        self.options.declare('mesh')
+        self.options.declare('semi_empirical_correction', types=bool)
 
     def setup(self):
-        self.surface = surface = self.options['surface']
         assert len(self.options['yLoc'])==2, "yLoc must contain indexes of begin and end of control surface"
         self.yLoc = self.options['yLoc']
         assert len(self.options['cLoc'])==2, "cLoc must contain chord fractions of begin and end of control surface"
         self.cLoc = self.options['cLoc']
         self.antisymmetric = self.options['antisymmetric']
 
-        mesh = self.surface['mesh']
+        mesh = self.options['mesh']
         nx = self.nx = mesh.shape[0]
         ny = self.ny = mesh.shape[1]
 
@@ -61,15 +61,13 @@ class ControlSurface(ExplicitComponent):
         normals = inputs['undeflected_normals']
         new_normals = normals.copy()
 
-        surface = self.surface
         yLoc = self.yLoc
         cLoc = self.cLoc
         antisymmetric = self.antisymmetric
 
         mesh = inputs['def_mesh']
 
-        if ('corrector' in surface['control_surfaces'][0] 
-                and surface['control_surfaces'][0]['corrector']):
+        if self.options['semi_empirical_correction']:
             deflection *= correction_plain_flap(deflection, cLoc)
 
 ############################### Get hinge lines ###############################
