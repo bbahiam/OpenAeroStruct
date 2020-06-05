@@ -280,7 +280,8 @@ def get_problem(surface, aileron):
     AS_point = AerostructPoint(surfaces=[surface],rotational=True,rollOnly=True)
 
     prob.model.add_subsystem(point_name, AS_point,
-            promotes_inputs=['v', 'alpha', 'Mach_number', 're', 'rho', 'cg', 'delta_aileron','omega'])
+            promotes_inputs=['v', 'alpha', 'Mach_number', 're', 'rho', 'cg','omega'])
+    prob.model.connect('delta_aileron', point_name+'.coupled.'+name+'.control_surfaces.'+aileron['name']+'.delta_aileron')
 
     com_name = point_name + '.' + name + '_perf'
 
@@ -388,4 +389,6 @@ class Test_dcl_ddelta_Swept_Wing(Test_dcl_ddelta):
 
 
 if __name__=='__main__':
+    prob = get_problem(straight_wing, ail04)
+    prob.final_setup()
     unittest.main()

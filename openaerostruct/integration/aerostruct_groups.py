@@ -13,6 +13,7 @@ from openaerostruct.aerodynamics.compressible_states import CompressibleVLMState
 from openaerostruct.structures.tube_group import TubeGroup
 from openaerostruct.structures.wingbox_group import WingboxGroup
 from openaerostruct.aerodynamics.control_surfaces import ControlSurface
+from openaerostruct.integration.control_surfaces_group import ControlSurfacesGroup
 
 import openmdao.api as om
 
@@ -112,30 +113,18 @@ class CoupledAS(om.Group):
             DisplacementTransferGroup(surface=surface),
             promotes_inputs=['nodes', 'mesh', 'disp'], promotes_outputs=['def_mesh'])
 
+        self.add_subsystem('aero_geom',
+            VLMGeometry(surface=surface),
+            promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', 'S_ref'])
+
         # Add control surfaces
         if 'control_surfaces' in surface:
-            normals_name = 'undeflected_normals'
-            self.add_subsystem('aero_geom',
-                VLMGeometry(surface=surface),
-                promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', ('normals', normals_name), 'S_ref'])
-
-            for ctrl_surf in surface['control_surfaces']: # TODO: only works with one control surface
-                deflected_normals_name = 'normals'
-                self.add_subsystem(ctrl_surf['name'],
-                                   ControlSurface(mesh=surface['mesh'],
-                                                  yLoc=ctrl_surf['yLoc'],
-                                                  cLoc=ctrl_surf['cLoc'],
-                                                  antisymmetric=ctrl_surf['antisymmetric'],
-                                                  semi_empirical_correction=ctrl_surf['corrector'],
-                                                  ),
-                                   promotes_inputs=[('undeflected_normals', normals_name),'delta_aileron','def_mesh'],
-                                   promotes_outputs=[('deflected_normals', deflected_normals_name)]
-                                   )
-                normals_name = deflected_normals_name 
-        else:
-            self.add_subsystem('aero_geom',
-                VLMGeometry(surface=surface),
-                promotes_inputs=['def_mesh'], promotes_outputs=['b_pts', 'widths', 'cos_sweep', 'lengths', 'chords', 'normals', 'S_ref'])
+            self.add_subsystem(
+                'control_surfaces',
+                ControlSurfacesGroup(control_surfaces=surface['control_surfaces'],
+                                     mesh=surface['mesh']),
+                promotes_inputs=['def_mesh']
+                )
 
         self.linear_solver = om.LinearRunOnce()
 
@@ -197,7 +186,6 @@ class AerostructPoint(om.Group):
 
             # Perform the connections with the modified names within the
             # 'aero_states' group.
-            coupled.connect(name + '.normals', 'aero_states.' + name + '_normals')
             coupled.connect(name + '.def_mesh', 'aero_states.' + name + '_def_mesh')
 
             # Connect the results from 'coupled' to the performance groups
@@ -238,9 +226,6 @@ class AerostructPoint(om.Group):
             else:
                 prom_in = []
             
-            if 'control_surfaces' in surface: # control surface addition
-                prom_in.append('delta_aileron')
-                
             coupled.add_subsystem(name, coupled_AS_group, promotes_inputs=prom_in) 
 
         if self.options['compressible'] == True:
@@ -264,7 +249,19 @@ class AerostructPoint(om.Group):
         for surface in surfaces:
             name = surface['name']
 
-            # Add a loads component to the coupled group
+            # Connect normals
+            if 'control_surfaces' in surface:
+                first = surface['control_surfaces'][0]['name']
+                last = surface['control_surfaces'][-1]['name']
+                coupled.connect(f'{name}.aero_geom.normals', f'{name}.control_surfaces.undeflected_normals')
+                coupled.connect(f'{name}.control_surfaces.deflected_normals', f'aero_states.{name}_normals')
+
+            else:
+                coupled.connect(f'{name}.aero_geom.normals', f'aero_states.{name}_normals')
+
+        # Add a loads component to the coupled group
+        for surface in surfaces:
+            name = surface['name']
             coupled.add_subsystem(name + '_loads', LoadTransfer(surface=surface))
 
         """
@@ -295,9 +292,6 @@ class AerostructPoint(om.Group):
         """
         prom_in = ['v', 'alpha', 'rho']
         
-        if 'control_surfaces' in surface:
-                prom_in.append('delta_aileron')
-                
         if self.options['compressible'] == True:
             prom_in.append('Mach_number')
         
