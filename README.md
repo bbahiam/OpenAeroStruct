@@ -1,9 +1,8 @@
 OpenAeroStruct
 ==============
 
-[![Build Status](https://travis-ci.org/mdolab/OpenAeroStruct.svg?branch=master)](https://travis-ci.org/mdolab/OpenAeroStruct)
+[![Build Status](https://travis-ci.com/mdolab/OpenAeroStruct.svg?branch=master)](https://travis-ci.com/mdolab/OpenAeroStruct)
 [![Coverage Status](https://coveralls.io/repos/github/mdolab/OpenAeroStruct/badge.svg?branch=master)](https://coveralls.io/github/mdolab/OpenAeroStruct?branch=master)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/mdolab/OpenAeroStruct.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/mdolab/OpenAeroStruct/context:python)
 
 OpenAeroStruct is a lightweight tool that performs aerostructural optimization using OpenMDAO.
 It couples a vortex-lattice method (VLM) and a 6 degrees of freedom 3-dimensional spatial beam model to simulate aerodynamic and structural analyses using lifting surfaces.
@@ -17,7 +16,9 @@ Then do:
 
 `pip install -e .`
 
-If you encounter any problems while using OpenAeroStruct, please create an issue on this GitHub repository.
+Please note that this repository is provided as is without any guaranteed support.
+If you would like to highlight issues, ask questions, or make changes, please do so using GitHub Issues and Pull Requests.
+The developers will address them at their discretion.
 
 Documentation
 -------------
@@ -64,12 +65,13 @@ Shamsheer S. Chauhan and Joaquim R. R. A. Martins, “Low-Fidelity Aerostructura
 
 Version Information
 -------------------
-This version of OpenAeroStruct requires [OpenMDAO](https://github.com/OpenMDAO/openmdao) v2.5+.
-If you are looking to use the previous version of OpenAeroStruct which uses OpenMDAO 1.7.4, use OpenAeroStruct v1.0 from [here](https://github.com/mdolab/OpenAeroStruct/releases).
+This version of OpenAeroStruct requires [OpenMDAO](https://github.com/OpenMDAO/openmdao) 3.1+ and Python3.
+Python2 is no longer supported.
+If you are looking to use the previous version of OpenAeroStruct which uses OpenMDAO 1.7.4, use OpenAeroStruct 1.0 from [here](https://github.com/mdolab/OpenAeroStruct/releases).
 
 License
 -------
-Copyright 2018 MDO Lab
+Copyright 2018-2020 MDO Lab
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
