@@ -248,8 +248,8 @@ swept_wing = {
             'exact_failure_constraint' : False, # if false, use KS function
             }
 
-def get_problem(surface, aileron):
-    surface['control_surfaces'] = [aileron]
+def get_problem(surface, ailerons):
+    surface['control_surfaces'] = ailerons
     # Create the problem and assign the model group
     prob = Problem()
 
@@ -281,7 +281,8 @@ def get_problem(surface, aileron):
 
     prob.model.add_subsystem(point_name, AS_point,
             promotes_inputs=['v', 'alpha', 'Mach_number', 're', 'rho', 'cg','omega'])
-    prob.model.connect('delta_aileron', point_name+'.coupled.'+name+'.control_surfaces.'+aileron['name']+'.delta_aileron')
+    for aileron in ailerons:
+        prob.model.connect('delta_aileron', point_name+'.coupled.'+name+'.control_surfaces.'+aileron['name']+'.delta_aileron')
 
     com_name = point_name + '.' + name + '_perf'
 
@@ -341,12 +342,13 @@ def get_dcl_ddelta(prob, q_psf):
 
 
 class Test_dcl_ddelta(unittest.TestCase):
-    def aileron_test(self, aileron, tol):
-        prob = get_problem(self.surface, aileron)
+    def aileron_test(self, ailerons, tol):
+        """ note that last aileron defines the empirical data name """
+        prob = get_problem(self.surface, ailerons)
         prob.set_solver_print(0)
 
-        for q_psf, cl_del_true in dcl_ddelta_data[self.surfname][aileron['name']]: # iterate lines
-            with self.subTest(q_psf=q_psf, wing=self.surfname, aileron=aileron['name']):
+        for q_psf, cl_del_true in dcl_ddelta_data[self.surfname][ailerons[-1]['name']]: # iterate lines
+            with self.subTest(q_psf=q_psf, wing=self.surfname, aileron=ailerons[-1]['name']):
                 cl_del = get_dcl_ddelta(prob, q_psf)
                 self.assertTrue(abs(cl_del-cl_del_true) <= tol,  # resolution of the report data is ~1e-4
                                 msg=f'obtained cl_del={cl_del}, empirical result is cl_del_true={cl_del_true}')
@@ -358,16 +360,16 @@ class Test_dcl_ddelta_Straigth_Wing(Test_dcl_ddelta):
         self.surface = straight_wing
 
     def test_ail04(self):
-        self.aileron_test(ail04, 6e-4)
+        self.aileron_test([ail04], 6e-4)
 
     def test_ail06(self):
-        self.aileron_test(ail06, 6e-4)
+        self.aileron_test([ail06], 6e-4)
     
     def test_ail08(self):
-        self.aileron_test(ail08, 6e-4)
+        self.aileron_test([ail08], 6e-4)
     
     def test_ail95(self):
-        self.aileron_test(ail95, 6e-4)
+        self.aileron_test([ail95], 6e-4)
 
 
 class Test_dcl_ddelta_Swept_Wing(Test_dcl_ddelta):
@@ -376,19 +378,19 @@ class Test_dcl_ddelta_Swept_Wing(Test_dcl_ddelta):
         self.surface = swept_wing
 
     def test_ail04(self):
-        self.aileron_test(ail04, 6e-4)
+        self.aileron_test([ail04], 6e-4)
 
     def test_ail06(self):
-        self.aileron_test(ail06, 6e-4)
+        self.aileron_test([ail06], 6e-4)
     
     def test_ail08(self):
-        self.aileron_test(ail08, 6e-4)
+        self.aileron_test([ail08], 6e-4)
     
     def test_ail95(self):
-        self.aileron_test(ail95, 6e-4)
+        self.aileron_test([ail95], 6e-4)
 
 
 if __name__=='__main__':
-    prob = get_problem(straight_wing, ail04)
+    prob=get_problem(straight_wing, [ail02, ail04])
     prob.final_setup()
     unittest.main()
