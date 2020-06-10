@@ -359,6 +359,9 @@ class Test_dcl_ddelta_Straigth_Wing(Test_dcl_ddelta):
         self.surfname = 'str'
         self.surface = straight_wing
 
+    def test_ail02(self):
+        self.aileron_test([ail02], 6e-4)
+
     def test_ail04(self):
         self.aileron_test([ail04], 6e-4)
 
@@ -376,6 +379,9 @@ class Test_dcl_ddelta_Swept_Wing(Test_dcl_ddelta):
     def setUp(self):
         self.surfname = 'swp'
         self.surface = swept_wing
+
+    def test_ail02(self):
+        self.aileron_test([ail02], 6e-4)
 
     def test_ail04(self):
         self.aileron_test([ail04], 6e-4)
