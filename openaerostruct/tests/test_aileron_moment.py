@@ -350,8 +350,7 @@ class Test_dcl_ddelta(unittest.TestCase):
         for q_psf, cl_del_true in dcl_ddelta_data[self.surfname][ailerons[-1]['name']]: # iterate lines
             with self.subTest(q_psf=q_psf, wing=self.surfname, aileron=ailerons[-1]['name']):
                 cl_del = get_dcl_ddelta(prob, q_psf)
-                self.assertTrue(abs(cl_del-cl_del_true) <= tol,  # resolution of the report data is ~1e-4
-                                msg=f'obtained cl_del={cl_del}, empirical result is cl_del_true={cl_del_true}')
+                self.assertAlmostEqual(cl_del, cl_del_true, delta=tol)  # resolution of the report data is ~1e-4
 
 
 class Test_dcl_ddelta_Straigth_Wing(Test_dcl_ddelta):
