@@ -13,7 +13,7 @@ from openaerostruct.aerodynamics.compressible_states import CompressibleVLMState
 from openaerostruct.structures.tube_group import TubeGroup
 from openaerostruct.structures.wingbox_group import WingboxGroup
 from openaerostruct.aerodynamics.control_surfaces import ControlSurface
-from openaerostruct.integration.control_surfaces_group import ControlSurfacesGroup
+from openaerostruct.aerodynamics.control_surfaces_group import ControlSurfacesGroup
 
 import openmdao.api as om
 
