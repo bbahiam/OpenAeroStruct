@@ -69,7 +69,7 @@ class TestDualPanelMesh(unittest.TestCase):
         mesh[1,1,:] = 1, 1, 0
         mesh[1,0,:] = 1, 0, 0
 
-        normals = np.array([[[0,0,1]],[[0,0,1]]])
+        normals = np.array([[[0,0,1],[0,0,1]]])
 
         self.mesh = mesh
         self.normals = normals
@@ -90,7 +90,27 @@ class TestDualPanelMesh(unittest.TestCase):
         control_surface = ControlSurface(mesh=self.mesh, cLoc=[0,0], yLoc=[0,1])
         control_surface.setup()
         control_surface.compute(inputs, outputs)
-        self.assertEqual(outputs['deflected_normals'].tolist(), [[[1,0,0]],[[0,0,1]]])
+        self.assertEqual(outputs['deflected_normals'].tolist(), [[[1,0,0],[0,0,1]]])
+
+    def test_dual_surfaces_daisy_chain(self):
+        inputs = {'delta_aileron': 90,
+                  'def_mesh': self.mesh,
+                  'undeflected_normals': self.normals}
+        outputs = {'deflected_normals': None}
+
+        control_surface_left = ControlSurface(mesh=self.mesh, cLoc=[0,0], yLoc=[0,1])
+        control_surface_right = ControlSurface(mesh=self.mesh, cLoc=[0,0], yLoc=[1,2])
+        control_surface_left.setup()
+        control_surface_right.setup()
+
+        # deflect left
+        control_surface_left.compute(inputs, outputs)
+        self.assertEqual(outputs['deflected_normals'].tolist(), [[[1,0,0],[0,0,1]]])
+
+        # deflect right
+        inputs['undeflected_normals'] = outputs['deflected_normals']  # daisy chain
+        control_surface_right.compute(inputs, outputs)
+        self.assertEqual(outputs['deflected_normals'].tolist(), [[[1,0,0],[1,0,0]]])
 
 
 if __name__=='__main__':
