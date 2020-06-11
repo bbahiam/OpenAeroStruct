@@ -29,9 +29,10 @@ class ControlSurface(ExplicitComponent):
     def initialize(self):
         self.options.declare('yLoc',types=list) # Index of Ypos start of aileron, 0=outboard, ny=centerline
         self.options.declare('cLoc',types=list) # Chordwise positions as a fraction of the chord
-        self.options.declare('antisymmetric',types=bool) # Antisymmetry (like ailerons)
+        self.options.declare('antisymmetric', types=bool, default=False) # Antisymmetry (like ailerons)
         self.options.declare('mesh')
-        self.options.declare('semi_empirical_correction', types=bool)
+        self.options.declare('name', types=str)
+        self.options.declare('corrector', types=bool, default=False)
 
     def setup(self):
         assert len(self.options['yLoc'])==2, "yLoc must contain indexes of begin and end of control surface"
@@ -67,7 +68,7 @@ class ControlSurface(ExplicitComponent):
 
         mesh = inputs['def_mesh']
 
-        if self.options['semi_empirical_correction']:
+        if self.options['corrector']:
             deflection *= correction_plain_flap(deflection, cLoc)
 
 ############################### Get hinge lines ###############################

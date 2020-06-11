@@ -24,14 +24,7 @@ class ControlSurfacesGroup(om.Group):
 
         # Add control surfaces as subsystems
         for control_surface in control_surfaces:
-            control_surface_component = ControlSurface(
-                mesh=self.options['mesh'],
-                yLoc=control_surface['yLoc'],
-                cLoc=control_surface['cLoc'],
-                antisymmetric=control_surface['antisymmetric'],
-                semi_empirical_correction=control_surface['corrector'],
-                )
-
+            control_surface_component = ControlSurface(mesh=self.options['mesh'], **control_surface)
             self.add_subsystem(control_surface['name'], control_surface_component)
 
         # Connect control surfaces
