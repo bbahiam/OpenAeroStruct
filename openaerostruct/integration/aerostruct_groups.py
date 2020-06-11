@@ -88,7 +88,7 @@ class AerostructGeometry(om.Group):
             promotes_outputs=['nodes', 'local_stiff_transformed', 'structural_mass', 'cg_location', 'element_mass'])
 
 
-class CoupledAS(om.Group):
+class _CoupledAS(om.Group):
 
     def initialize(self):
         self.options.declare('surface', types=dict)
@@ -217,7 +217,7 @@ class AerostructPoint(om.Group):
             # Add components to the 'coupled' group for each surface.
             # The 'coupled' group must contain all components and parameters
             # needed to converge the aerostructural system.
-            coupled_AS_group = CoupledAS(surface=surface)
+            coupled_AS_group = _CoupledAS(surface=surface)
 
             if surface['distributed_fuel_weight'] or 'n_point_masses' in surface.keys() or surface['struct_weight_relief']:
                 prom_in = ['load_factor']
