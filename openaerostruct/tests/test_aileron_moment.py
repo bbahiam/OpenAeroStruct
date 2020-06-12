@@ -81,17 +81,26 @@ r_str = np.hstack((np.flip(r_str)[:-1],r_str))
 c = [0.7,0.7]
 
 # Aileron locations for straight wing
+# for single control surface
 ind02 = [0,n]
 ind04 = [0,2*n]
 ind06 = [0,3*n]
 ind08 = [0,4*n]
 ind1 =  [0,5*n]
 ind95 = [0,ind1[1]-1]
+# for multiple control surfaces
+ind0002 = [0,n]
+ind0204 = [n,2*n]
+ind0406 = [2*n,3*n]
+ind0608 = [3*n,4*n]
+ind0810 = [4*n,5*n]
+ind0895 = [4*n,ind1[1]-1]
 
 # Inboard aileron locations for swept wing
 ind02in = [n,2*n]
 ind04in = [n,3*n]
 
+# for single control surfaces
 ail02 = {
        'name': 'ail02',
        'yLoc': ind02,
@@ -147,6 +156,50 @@ ail04in = {
        'cLoc': c,
        'antisymmetric': True,
        'corrector' : True
+       }
+
+# for multiple control surfaces
+ail0002 = {
+       'name': 'ail02',
+       'yLoc': ind0002,
+       'cLoc': c,
+       'antisymmetric': True,
+       'corrector' : True
+       }
+ail0204 = {
+       'name': 'ail04',
+       'yLoc': ind0204,
+       'cLoc': c,
+       'antisymmetric': True,
+       'corrector' : True
+       }
+ail0406 = {
+       'name': 'ail06',
+       'yLoc': ind0406,
+       'cLoc': c,
+       'antisymmetric': True,
+       'corrector' : False
+       }
+ail0608 = {
+       'name': 'ail08',
+       'yLoc': ind0608,
+       'cLoc': c,
+       'antisymmetric': True,
+       'corrector' : False
+       }
+ail0810 = {
+       'name': 'ail1',
+       'yLoc': ind0810,
+       'cLoc': c,
+       'antisymmetric': True,
+       'corrector' : False
+       }
+ail0895 = {
+       'name': 'ail95',
+       'yLoc': ind0895,
+       'cLoc': c,
+       'antisymmetric': True,
+       'corrector' : False
        }
 
 
@@ -366,12 +419,21 @@ class Test_dcl_ddelta_Straigth_Wing(Test_dcl_ddelta):
 
     def test_ail06(self):
         self.aileron_test([ail06], 6e-4)
-    
+
     def test_ail08(self):
         self.aileron_test([ail08], 6e-4)
-    
+
     def test_ail95(self):
         self.aileron_test([ail95], 6e-4)
+
+    def test_ail04_multiple(self):
+        self.aileron_test([ail0002, ail0204], 6e-4)
+
+    def test_ail06_multiple(self):
+        self.aileron_test([ail0002, ail0204, ail0406], 6e-4)
+
+    def test_ail08_multiple(self):
+        self.aileron_test([ail0002, ail0204, ail0406,ail0608], 6e-4)
 
 
 class Test_dcl_ddelta_Swept_Wing(Test_dcl_ddelta):
