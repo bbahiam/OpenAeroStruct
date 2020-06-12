@@ -173,7 +173,7 @@ class ControlSurface(ExplicitComponent):
                 if cs_panels[i,j] != 0:
                     k = j+yLoc[0] # y index for normals
 
-                    if len(deflection)==1:
+                    if np.size(deflection)==1:
                         interp_defl = deflection*cs_panels[i,j]
                     else:
                         interp_defl = deflection[j]*cs_panels[i,j]
