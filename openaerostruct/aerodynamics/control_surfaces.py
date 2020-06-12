@@ -73,13 +73,13 @@ class ControlSurface(ExplicitComponent):
 
 ############################### Get hinge lines ###############################
         if antisymmetric:
-            _, _, mirror_hinge = find_hinge(cLoc, [-y for y in yLoc], mesh)
+            _, _, mirror_hinge = find_hinge(cLoc, [-y-1 for y in yLoc], mesh)
 
         h0, h1, hinge = find_hinge(cLoc, yLoc, mesh)
 
 
 ###################### Find affected mesh points ##########################
-        cs_mesh = mesh[:,np.min(yLoc):np.max(yLoc)+1,:]
+        cs_mesh = mesh[:,yLoc[0]:yLoc[1]+1,:]
 
         # X and Y locations of the hingeline
         yHinge = cs_mesh[0,:,1]
@@ -171,7 +171,7 @@ class ControlSurface(ExplicitComponent):
         for i in range(np.size(cs_panels,axis=0)):
             for j in range(np.size(cs_panels,axis=1)):
                 if cs_panels[i,j] != 0:
-                    k = j+np.min(yLoc) # y index for normals
+                    k = j+yLoc[0] # y index for normals
 
                     interp_defl = deflection*cs_panels[i,j]
                     rot = R.from_rotvec(hinge*interp_defl)
@@ -214,7 +214,7 @@ class ControlSurface(ExplicitComponent):
            for i in range(np.size(cs_panels,axis=0)):
                for j in range(np.size(cs_panels,axis=1)):
                    if cs_panels[i,j] != 0:
-                       k = j+np.min(yLoc) # y index for normals
+                       k = j+np.yLoc[0] # y index for normals
 
                        # Get angle magnitude and axis
                        rot_ang = deflection*cs_panels[i,j]
@@ -262,7 +262,7 @@ class ControlSurface(ExplicitComponent):
        for i in range(np.size(cs_panels,axis=0)):
            for j in range(np.size(cs_panels,axis=1)):
                if cs_panels[i,j] != 0:
-                   k = j+np.min(yLoc) # y index for normals
+                   k = j+np.yLoc[0] # y index for normals
 
                    interp_defl = deflectionCom*cs_panels[i,j]
 
@@ -375,8 +375,7 @@ def correction_plain_flap(deflection, cLoc):
     return nu
 
 def find_hinge(cLoc, yLoc, mesh):
-    y0 = np.min(yLoc); # The starting y position of the aileron
-    y1 = np.max(yLoc); # The ending y position of the aileron
+    y0, y1 = yLoc # The aileron extremities
 
     mesh0 = mesh[:,y0,:] # The chordwise mesh at the 1st y pos
     mesh1 = mesh[:,y1,:] # The chordwise mesh at the 2nd y pos
