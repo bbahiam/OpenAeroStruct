@@ -359,7 +359,6 @@ def get_problem(surface, ailerons):
     prob.setup(check=True)
     prob.model.AS_point_0.coupled.nonlinear_solver.options['maxiter'] = 10000
     prob.model.AS_point_0.coupled.nonlinear_solver.options['atol'] = 1e-6
-    prob.model.AS_point_0.coupled.nonlinear_solver.options['err_on_non_converge'] = True
 
     return prob
 
