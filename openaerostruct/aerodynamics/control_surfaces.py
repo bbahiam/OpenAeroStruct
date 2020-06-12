@@ -173,7 +173,11 @@ class ControlSurface(ExplicitComponent):
                 if cs_panels[i,j] != 0:
                     k = j+yLoc[0] # y index for normals
 
-                    interp_defl = deflection*cs_panels[i,j]
+                    if len(deflection)==1:
+                        interp_defl = deflection*cs_panels[i,j]
+                    else:
+                        interp_defl = deflection[j]*cs_panels[i,j]
+
                     rot = R.from_rotvec(hinge*interp_defl)
                     new_normals[i,k,:] = rot.apply(normals[i,k,:])
 

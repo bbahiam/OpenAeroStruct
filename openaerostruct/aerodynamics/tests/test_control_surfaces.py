@@ -112,6 +112,19 @@ class TestDualPanelMesh(unittest.TestCase):
         control_surface_right.compute(inputs, outputs)
         self.assertEqual(outputs['deflected_normals'].tolist(), [[[1,0,0],[1,0,0]]])
 
+    def test_dual_surface_vector_input(self):
+        inputs = {'delta_aileron': np.array([90,-90]),
+                  'def_mesh': self.mesh,
+                  'undeflected_normals': self.normals}
+        outputs = {'deflected_normals': None}
+
+        control_surfaces = ControlSurface(mesh=self.mesh, cLoc=[0,0], yLoc=[0,2])
+        control_surfaces.setup()
+
+        control_surfaces.compute(inputs, outputs)
+        self.assertEqual(outputs['deflected_normals'].tolist(), [[[1,0,0],[-1,0,0]]])
+
+
 
 class TestFourPanelMesh(unittest.TestCase):
     def setUp(self):
