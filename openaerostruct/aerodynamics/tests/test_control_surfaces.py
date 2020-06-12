@@ -113,5 +113,52 @@ class TestDualPanelMesh(unittest.TestCase):
         self.assertEqual(outputs['deflected_normals'].tolist(), [[[1,0,0],[1,0,0]]])
 
 
+class TestFourPanelMesh(unittest.TestCase):
+    def setUp(self):
+        # Four panel mesh on the xy plane
+        #
+        # (0,0)------(0,1)------(0,2)------(0,3)------(0,4)
+        #   |          |          |          |          |  
+        #   |          |          |          |          |  
+        # (1,0)------(1,1)------(1,2)------(1,3)------(1,4)
+        #   
+        #  |-->y
+        # x|
+        #  v
+        #
+
+        mesh = np.array([[(0,0,0), (0,1,0), (0,2,0), (0,3,0), (0,4,0)],
+                         [(1,0,0), (1,1,0), (1,2,0), (1,3,0), (1,4,0)]])
+
+        normals = np.tile(np.array([0,0,1]), (1,4,1))
+
+        self.mesh = mesh
+        self.normals = normals
+
+    def test_inboard_antisymmetric(self):
+        inputs = {'delta_aileron': 90,
+                  'def_mesh': self.mesh,
+                  'undeflected_normals': self.normals}
+        outputs = {'deflected_normals': None}
+
+        control_surface = ControlSurface(mesh=self.mesh, cLoc=[0,0], yLoc=[1,2], antisymmetric=True)
+        control_surface.setup()
+        control_surface.compute(inputs, outputs)
+
+        self.assertEqual(outputs['deflected_normals'].tolist(), [[[0,0,1],[1,0,0],[-1,0,0],[0,0,1]]])
+
+    def test_outboard_antisymmetric(self):
+        inputs = {'delta_aileron': 90,
+                  'def_mesh': self.mesh,
+                  'undeflected_normals': self.normals}
+        outputs = {'deflected_normals': None}
+
+        control_surface = ControlSurface(mesh=self.mesh, cLoc=[0,0], yLoc=[0,1], antisymmetric=True)
+        control_surface.setup()
+        control_surface.compute(inputs, outputs)
+
+        self.assertEqual(outputs['deflected_normals'].tolist(), [[[1,0,0],[0,0,1],[0,0,1],[-1,0,0]]])
+
+
 if __name__=='__main__':
     unittest.main()
